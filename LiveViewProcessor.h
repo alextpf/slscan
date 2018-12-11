@@ -9,6 +9,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+using namespace std;
+
 // The frame processor interface
 class FrameProcessor
 {
@@ -21,25 +23,25 @@ public:
 	bool m_Debug;
 }; // class FrameProcessor
 
-class VideoProcessor
+class LiveViewProcessor
 {
 public:
     // Constructor setting the default values
-    VideoProcessor();
+    LiveViewProcessor();
 
     // set the name of the video file
-    bool SetInput( std::string filename );
+    bool SetInput( vector<string> filename );
 
     // set the camera ID
-    bool SetInput( int id );
+    bool SetInput( vector<int> id );
 
     // set the vector of input m_Images
-    void SetInput( const std::vector<std::string>& imgs );
+    void SetInput( const vector<vector<string>>& imgs );
 
     // set the output video file
     // by default the same parameters than input video will be used
     bool SetOutput(
-        const std::string& filename,
+        const vector<string>& filename,
         int codec = 0,
         double framerate = 0.0,
         bool isColor = true );
@@ -47,13 +49,13 @@ public:
     // set the output as a series of image files
     // extension must be ".jpg", ".bmp" ...
     bool SetOutput(
-        const std::string& filename, // filename prefix
-        const std::string& ext, // image file extension
+        const vector<string>& filename, // filename prefix
+        const string& ext, // image file extension
         int numberOfDigits = 3,   // number of digits
         int startIndex = 0 );
 
     // set the callback function that will be called for each frame
-    void SetFrameProcessor( void( *frameProcessingCallback ) ( cv::Mat&, cv::Mat& ) );
+    void SetFrameProcessor( void( *frameProcessingCallback ) ( vector<cv::Mat>&, vector<cv::Mat>& ) );
 
     // set the instance of the class that implements the FrameProcessor interface
     void SetFrameProcessor( FrameProcessor* frameProcessorPtr );
@@ -77,14 +79,14 @@ public:
     }
 
     // to display the processed frames
-    void DisplayInput( std::string wn )
+    void DisplayInput( string wn )
     {
         m_WindowNameInput = wn;
         cv::namedWindow( m_WindowNameInput );
     }
 
     // to display the processed frames
-    void DisplayOutput( std::string wn )
+    void DisplayOutput( string wn )
     {
         m_WindowNameOutput = wn;
         cv::namedWindow( m_WindowNameOutput );
@@ -187,7 +189,7 @@ public:
         return m_DownSampleRate;
     }
 
-	std::string GetInputWinName()
+	string GetInputWinName()
 	{
 		return m_WindowNameInput;
 	}
@@ -210,10 +212,10 @@ private:
     bool m_CallIt;
 
     // Input display window name
-    std::string m_WindowNameInput;
+    string m_WindowNameInput;
 
     // Output display window name
-    std::string m_WindowNameOutput;
+    string m_WindowNameOutput;
 
     // delay between each frame processing
     int m_Delay;
@@ -231,16 +233,16 @@ private:
     bool m_Stop;
 
     // vector of image filename to be used as input
-    std::vector<std::string> m_Images;
+    vector<string> m_Images;
 
     // image vector iterator
-    std::vector<std::string>::const_iterator m_ItImg;
+    vector<string>::const_iterator m_ItImg;
 
     // the OpenCV video writer object
     cv::VideoWriter m_Writer;
 
     // output filename
-    std::string m_OutputFile;
+    string m_OutputFile;
 
     // current index for output Images
     int m_CurrentIndex;
@@ -249,7 +251,7 @@ private:
     int m_Digits;
 
     // extension of output Images
-    std::string m_Extension;
+    string m_Extension;
 
     // extract only portion of the image
     int m_InitPosX;
@@ -270,5 +272,5 @@ private:
     // could be: video file or m_Images
     void WriteNextFrame( cv::Mat& frame );
 
-}; // class VideoProcessor
+}; // class LiveViewProcessor
 

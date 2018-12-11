@@ -1,4 +1,4 @@
-#include "VideoProcessor.h"
+#include "LiveViewProcessor.h"
 
 #include <conio.h> // for getch
 #include <windows.h> // for kbhit
@@ -7,7 +7,7 @@
 #define FRAME_HEIGHT 360
 
 //=======================================================================
-VideoProcessor::VideoProcessor()
+LiveViewProcessor::LiveViewProcessor()
 : m_CallIt( false )
 , m_Delay( -1 )
 , m_DownSampleRate( 1 ) // no downsample
@@ -24,7 +24,7 @@ VideoProcessor::VideoProcessor()
 {}
 
 //=======================================================================
-bool VideoProcessor::ReadNextFrame( cv::Mat& frame )
+bool LiveViewProcessor::ReadNextFrame( cv::Mat& frame )
 {
     bool ok = false;
 
@@ -69,7 +69,7 @@ bool VideoProcessor::ReadNextFrame( cv::Mat& frame )
 }
 
 //=======================================================================
-void VideoProcessor::WriteNextFrame( cv::Mat& frame )
+void LiveViewProcessor::WriteNextFrame( cv::Mat& frame )
 {
     if( m_Extension.length() )
     {
@@ -91,7 +91,7 @@ void VideoProcessor::WriteNextFrame( cv::Mat& frame )
 }
 
 //=======================================================================
-bool VideoProcessor::SetInput( std::string filename )
+bool LiveViewProcessor::SetInput( std::string filename )
 {
     m_TotalFrame = 0;
     // In case a resource was already
@@ -104,7 +104,7 @@ bool VideoProcessor::SetInput( std::string filename )
 }
 
 //=======================================================================
-bool VideoProcessor::SetInput( int id )
+bool LiveViewProcessor::SetInput( int id )
 {
     m_TotalFrame = 0;
     // In case a resource was already
@@ -120,7 +120,7 @@ bool VideoProcessor::SetInput( int id )
 }
 
 //=======================================================================
-void VideoProcessor::SetInput( const std::vector<std::string>& imgs )
+void LiveViewProcessor::SetInput( const std::vector<std::string>& imgs )
 {
     m_TotalFrame = 0;
     // In case a resource was already
@@ -133,7 +133,7 @@ void VideoProcessor::SetInput( const std::vector<std::string>& imgs )
 }
 
 //=======================================================================
-bool VideoProcessor::SetOutput(
+bool LiveViewProcessor::SetOutput(
     const std::string& filename,
     int codec,
     double framerate,
@@ -163,7 +163,7 @@ bool VideoProcessor::SetOutput(
 }
 
 //=======================================================================
-bool VideoProcessor::SetOutput(
+bool LiveViewProcessor::SetOutput(
     const std::string& filename, // filename prefix
     const std::string& ext, // image file m_Extension
     int numberOfDigits,   // number of digits
@@ -188,7 +188,7 @@ bool VideoProcessor::SetOutput(
 }
 
 //=======================================================================
-void VideoProcessor::SetFrameProcessor( void( *frameProcessingCallback )( cv::Mat&, cv::Mat& ) )
+void LiveViewProcessor::SetFrameProcessor( void( *frameProcessingCallback )( cv::Mat&, cv::Mat& ) )
 {
     // invalidate frame processor class instance
     m_FrameProcessor = 0;
@@ -198,7 +198,7 @@ void VideoProcessor::SetFrameProcessor( void( *frameProcessingCallback )( cv::Ma
 }
 
 //=======================================================================
-void VideoProcessor::SetFrameProcessor( FrameProcessor* frameProcessorPtr )
+void LiveViewProcessor::SetFrameProcessor( FrameProcessor* frameProcessorPtr )
 {
     // invalidate callback function
     m_Process = 0;
@@ -212,7 +212,7 @@ void VideoProcessor::SetFrameProcessor( FrameProcessor* frameProcessorPtr )
 }
 
 //=======================================================================
-cv::Size VideoProcessor::GetFrameSize()
+cv::Size LiveViewProcessor::GetFrameSize()
 {
     if( m_Images.size() == 0 )
     {
@@ -252,7 +252,7 @@ cv::Size VideoProcessor::GetFrameSize()
 }
 
 //=======================================================================
-long VideoProcessor::GetFrameNumber()
+long LiveViewProcessor::GetFrameNumber()
 {
     if( m_Images.size() == 0 )
     {
@@ -268,7 +268,7 @@ long VideoProcessor::GetFrameNumber()
 }
 
 //=======================================================================
-double VideoProcessor::GetPositionMS()
+double LiveViewProcessor::GetPositionMS()
 {
     // undefined for vector of m_Images
     if( m_Images.size() != 0 )
@@ -281,7 +281,7 @@ double VideoProcessor::GetPositionMS()
 }
 
 //=======================================================================
-double VideoProcessor::GetFrameRate()
+double LiveViewProcessor::GetFrameRate()
 {
     // undefined for vector of m_Images
     if( m_Images.size() != 0 )
@@ -294,7 +294,7 @@ double VideoProcessor::GetFrameRate()
 }
 
 //=======================================================================
-long VideoProcessor::GetTotalFrameCount()
+long LiveViewProcessor::GetTotalFrameCount()
 {
     // for vector of m_Images
     if( m_Images.size() != 0 )
@@ -307,7 +307,7 @@ long VideoProcessor::GetTotalFrameCount()
 }
 
 //=======================================================================
-int VideoProcessor::GetCodec( char codec[4] )
+int LiveViewProcessor::GetCodec( char codec[4] )
 {
     // undefined for vector of m_Images
     if( m_Images.size() != 0 )
@@ -332,7 +332,7 @@ int VideoProcessor::GetCodec( char codec[4] )
 }
 
 //=======================================================================
-bool VideoProcessor::SetFrameNumber( long pos )
+bool LiveViewProcessor::SetFrameNumber( long pos )
 {
     // for vector of m_Images
     if( m_Images.size() != 0 )
@@ -357,7 +357,7 @@ bool VideoProcessor::SetFrameNumber( long pos )
 }
 
 //=======================================================================
-bool VideoProcessor::SetPositionMS( double pos )
+bool LiveViewProcessor::SetPositionMS( double pos )
 {
     // not defined in vector of m_Images
     if( m_Images.size() != 0 )
@@ -371,7 +371,7 @@ bool VideoProcessor::SetPositionMS( double pos )
 }
 
 //=======================================================================
-bool VideoProcessor::SetRelativePosition( double pos )
+bool LiveViewProcessor::SetRelativePosition( double pos )
 {
     // for vector of m_Images
     if( m_Images.size() != 0 )
@@ -391,7 +391,7 @@ bool VideoProcessor::SetRelativePosition( double pos )
 }// SetRelativePosition
 
 //=======================================================================
-void VideoProcessor::Run()
+void LiveViewProcessor::Run()
 {
     // current frame
     cv::Mat frame;

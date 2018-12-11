@@ -8,7 +8,7 @@
 #include <opencv2/video.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include "VideoProcessor.h"
+#include "LiveViewProcessor.h"
 
 using namespace cv;
 using namespace std;
@@ -41,49 +41,110 @@ OPERATION MainMenu()
 	cout << "[9]: Exit \n\n";
 	cout << "Answer:";
 
-	char c;
-	cin << c;
+    int c;
+    std::cin >> c;
 
-	return static_cast<OPERATION>( static_cast<int>( c ) - 48);
+    return static_cast<OPERATION>( c );
 
 } // MainMenu
 
 //========================================
 int main()
 {
-	OPERATION c( CAPTURE_CALI_LEFT );
-	while ( c != EXIT )
+    char inPath[256];
+    char outPath[256];
+    char filename[256];
+    int webCamId; // 0: default (laptop's camera), 1: external connected cam
+
+    int inputType( 0 ); // 0: imgs, 1: video, 2: webcam
+    int outputType( 0 ); // 0: imgs, 1: video, 2: webcam
+    int delay( 0 );
+    bool showOutputImg( false );
+    bool showInputImg( false );
+
+    LiveViewProcessor processor;
+
+	OPERATION op( CAPTURE_CALI_LEFT );
+	while ( op != EXIT )
 	{
-		c = MainMenu();
+        op = MainMenu();
+        switch( op )
+        {
+        case CAPTURE_CALI_LEFT:
+        {
+            // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+            sprintf_s( inPath, "../cali_data/left/" );
+            sprintf_s( outPath, "../cali_data/left/" );
+            sprintf_s( filename, "cali_left" );
+            inputType = 2; // webcam
+            outputType = 0; // imgs
+            delay = 0; // wait indefinitely, untill any of the above charaters is hit ('c','a','r','Esc')
+            webCamId = 1;
+
+            showOutputImg = true;
+            showInputImg = true;
+        }
+        break;
+
+        case CAPTURE_CALI_RIGHT:
+        {
+            // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+            sprintf_s( inPath, "../cali_data/right/" );
+            sprintf_s( outPath, "../cali_data/right/" );
+            sprintf_s( filename, "cali_right" );
+            inputType = 2; // webcam
+            outputType = 0; // imgs
+            delay = 0; // wait indefinitely, untill any of the above charaters is hit ('c','a','r','Esc')
+            webCamId = 2;
+
+            showOutputImg = true;
+            showInputImg = true;
+        }
+        break;
+
+        case CAPTURE_CALI_LEFT_RIGHT:
+        {}
+        break;
+
+        case CALIBRATE_LEFT:
+        {}
+        break;
+
+        case CALIBRATE_RIGHT:
+        {}
+        break;
+
+        case CALIBRATE_LEFT_RIGHT:
+        {}
+        break;
+
+        case MANUAL_SCAN:
+        {}
+        break;
+
+        case AUTO_SCAN:
+        {}
+        break;
+
+        default:
+            break;
+
+
+        }
 	}
 
 	//////////////////
 	// variables
 	//////////////////
 
-	//const char inPath[]		= "C:/tmp/data3/";
-	const char inPath[]		= "C:/Users/alex_/Documents/target_recognition/target/data/";
-	//const char inPath[]		= "C:/Users/alex_/Documents/Arduino/aidenbot/v2/aidenbot/data/webcam/";
-	//const char outPath[]	= "C:/tmp/data3/";
-	const char outPath[] = "C:/Users/alex_/Documents/target_recognition/target/data/";
-	const char filename[]	= "3";
-
-	const int webCamId		= 1; // 0: default (laptop's camera), 1: external connected cam
 	const int startFrame    = 0;// frame number we want to start at
 	const int endFrame		= 837;
+    FrameProcessor * proc = NULL;
 
-	int inputType = 0;
-	int outputType = 0;
-	VideoProcessor processor;
-	bool showInputImg = true;
-	bool showOutputImg = true;
-	FrameProcessor * proc = NULL;
-	int delay = 1;
-
-	//cout << '\a';
-	Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
-	cin.get(); // wait
-	return 0;
+    //cout << '\a';
+    //Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+    //cin.get(); // wait
+    //return 0;
 
 	/////////////////////////////////////////////////////
 	// Input
