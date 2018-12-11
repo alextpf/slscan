@@ -1,5 +1,6 @@
-
+#include <stdlib.h>
 #include <iostream>
+#include <conio.h>
 #include <windows.h> // WinApi header
 
 #include <opencv2/core.hpp>
@@ -12,9 +13,49 @@
 using namespace cv;
 using namespace std;
 
+enum OPERATION {
+	CAPTURE_CALI_LEFT = 0,
+	CAPTURE_CALI_RIGHT,
+	CAPTURE_CALI_LEFT_RIGHT,
+	CALIBRATE_LEFT,
+	CALIBRATE_RIGHT,
+	CALIBRATE_LEFT_RIGHT,
+	MANUAL_SCAN,
+	AUTO_SCAN,
+	EXIT
+};
+
+OPERATION MainMenu()
+{
+	system( "CLS" ); // clear prompt command
+	cout << "Choose from the following options:\n";
+	cout << "=============================================================================\n";
+	cout << "[1]: capture calibration patterns for left camera ( Esc to terminate )\n";
+	cout << "[2]: capture calibration patterns for right camera  ( Esc to terminate )\n";
+	cout << "[3]: capture calibration patterns for both left & right camera  ( Esc to terminate )\n";
+	cout << "[4]: calibrate left camera\n";
+	cout << "[5]: calibrate right camera\n";
+	cout << "[6]: calibrate both left & right camera\n";
+	cout << "[7]: Manual Scan ( hit 'c' to capture one scan ) \n";
+	cout << "[8]: Auto Scan with turntable \n";
+	cout << "[9]: Exit \n\n";
+	cout << "Answer:";
+
+	char c;
+	cin << c;
+
+	return static_cast<OPERATION>( static_cast<int>( c ) - 48);
+
+} // MainMenu
+
 //========================================
 int main()
 {
+	OPERATION c( CAPTURE_CALI_LEFT );
+	while ( c != EXIT )
+	{
+		c = MainMenu();
+	}
 
 	//////////////////
 	// variables
