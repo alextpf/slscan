@@ -1,0 +1,5 @@
+pattern generator:
+https://calib.io/pages/camera-calibration-pattern-generator
+
+divide pattern into multiple papes for printing:
+https://rasterbator.net/#
