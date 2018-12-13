@@ -17,106 +17,86 @@ LiveViewProcessor::LiveViewProcessor()
 , m_FrameToStop( -1 )
 , m_Process( 0 )
 , m_FrameProcessor( 0 )
-, m_InitPosX( -1 )
-, m_InitPosY( -1 )
-, m_OffsetX( -1 )
-, m_OffsetY( -1 )
+, m_NumCam( 0 )
 {}
 
 //=======================================================================
-bool LiveViewProcessor::ReadNextFrame( cv::Mat& frame )
+bool LiveViewProcessor::ReadNextFrame( vector<cv::Mat>& frame )
 {
-    bool ok = false;
+	bool ok( true );
 
-    if( m_Images.size() == 0 )
-    {
-        //////////////////////////
-        // it's video or webcam
-        //////////////////////////
-        ok = m_Capture.read( m_TmpFrame );
-    }
-    else
-    {
-        ////////////////
-        // it's images
-        ////////////////
-        if( m_ItImg != m_Images.end() )
-        {
-            //printf( "%s\n", ( *m_ItImg ).c_str() ); // debug: print file path
-            m_TmpFrame = cv::imread( *m_ItImg );
-            m_ItImg++;
-
-            ok = m_TmpFrame.data != 0;
-        }
-    }
-
-    // whether we extract only portion of the image
-    if( m_OffsetX > 0 && m_OffsetY > 0 && m_InitPosX >= 0 && m_InitPosY >= 0 )
-    {
-        frame = m_TmpFrame( cv::Rect( m_InitPosX, m_InitPosY, m_OffsetX, m_OffsetY ) ).clone();
-    }
-    else
-    {
-        frame = m_TmpFrame;
-    }
-
-	if (m_DownSampleRate > 1)
+	//////////////////////////
+	// it's video or webcam
+	//////////////////////////
+	for ( int i = 0; i < m_NumCam; i++ )
 	{
-		cv::resize(frame, frame, cv::Size(), 1.0 / m_DownSampleRate, 1.0 / m_DownSampleRate);
+		cv::Mat tmp;
+		ok = ok && m_Capture[i].read( tmp );
+
+		if ( ok && m_DownSampleRate > 1 )
+		{
+			cv::resize( tmp, tmp, cv::Size(), 1.0 / m_DownSampleRate, 1.0 / m_DownSampleRate );
+		}
+
+		frame.push_back( tmp );
 	}
 
     return ok;
 }
 
 //=======================================================================
-void LiveViewProcessor::WriteNextFrame( cv::Mat& frame )
+void LiveViewProcessor::WriteNextFrame( vector<cv::Mat>& frame )
 {
     if( m_Extension.length() )
     {
         ////////////////
         // it's images
         ////////////////
-
-        std::stringstream ss;
-        ss << m_OutputFile << std::setfill( '0' ) << std::setw( m_Digits ) << m_CurrentIndex++ << m_Extension;
-        cv::imwrite( ss.str(), frame );
-    }
-    else
-    {
-        ////////////////
-        // it's video
-        ////////////////
-        m_Writer.write( frame );
+		for ( int i = 0; i < m_NumCam; i++ )
+		{
+			std::stringstream ss;
+			ss << m_OutputFile[i] << std::setfill( '0' ) << std::setw( m_Digits ) << m_CurrentIndex++ << m_Extension;
+			cv::imwrite( ss.str(), frame[i] );
+		}
     }
 }
 
 //=======================================================================
-bool LiveViewProcessor::SetInput( std::string filename )
+bool LiveViewProcessor::SetInput( vector<std::string> filename )
 {
     m_TotalFrame = 0;
     // In case a resource was already
     // associated with the VideoCapture instance
-    m_Capture.release();
-    m_Images.clear();
+	bool ok( true );
+
+	for ( int i = 0; i < m_NumCam; i++ )
+	{
+		m_Capture[i].release();
+		ok = ok && m_Capture[i].open( filename[i] );
+	}
 
     // Open the video file
-    return m_Capture.open( filename );
+	return ok;
 }
 
 //=======================================================================
-bool LiveViewProcessor::SetInput( int id )
+bool LiveViewProcessor::SetInput( vector<int> id )
 {
     m_TotalFrame = 0;
+	bool ok( true );
+
     // In case a resource was already
     // associated with the VideoCapture instance
-    m_Capture.release();
-    m_Images.clear();
-
-	m_Capture.set( CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
-	m_Capture.set( CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
+	for ( int i = 0; i < m_NumCam; i++ )
+	{
+		m_Capture[i].release();
+		m_Capture[i].set( CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
+		m_Capture[i].set( CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
+		ok = ok && m_Capture[i].open( id[i] );
+	}
 
     // Open the video file
-    return m_Capture.open( id );
+    return ok;
 }
 
 //=======================================================================
@@ -130,36 +110,6 @@ void LiveViewProcessor::SetInput( const std::vector<std::string>& imgs )
     // the input will be this vector of m_Images
     m_Images = imgs;
     m_ItImg = m_Images.begin();
-}
-
-//=======================================================================
-bool LiveViewProcessor::SetOutput(
-    const std::string& filename,
-    int codec,
-    double framerate,
-    bool isColor )
-{
-    m_OutputFile = filename;
-    m_Extension.clear();
-
-    if( framerate == 0.0 )
-    {
-        framerate = GetFrameRate(); // same as input
-    }
-
-    char c[4];
-    // use same codec as input
-    if( codec == 0 )
-    {
-        codec = GetCodec( c );
-    }
-
-    // Open output video
-    return m_Writer.open( m_OutputFile, // filename
-        codec, // codec to be used
-        framerate,      // frame rate of the video
-        GetFrameSize(), // frame size
-        isColor );       // color video?
 }
 
 //=======================================================================

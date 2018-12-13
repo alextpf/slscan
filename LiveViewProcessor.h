@@ -38,14 +38,6 @@ public:
     // set the vector of input m_Images
     void SetInput( const vector<vector<string>>& imgs );
 
-    // set the output video file
-    // by default the same parameters than input video will be used
-    bool SetOutput(
-        const vector<string>& filename,
-        int codec = 0,
-        double framerate = 0.0,
-        bool isColor = true );
-
     // set the output as a series of image files
     // extension must be ".jpg", ".bmp" ...
     bool SetOutput(
@@ -151,7 +143,18 @@ public:
     // Is a m_Capture device opened?
     bool IsOpened()
     {
-        return m_Capture.isOpened() || !m_Images.empty();
+		// either one of the camera should be open
+
+		int s = static_cast<int>( m_Capture.size() );
+
+		bool isOpen( true );
+
+		for ( int i = 0; i < s; i++ )
+		{
+			isOpen = isOpen && m_Capture[i].isOpened;
+		}
+
+        return isOpen;
     }
 
     void SetInitPosX( int x )
@@ -194,14 +197,21 @@ public:
 		return m_WindowNameInput;
 	}
 
+	void SetNumCam( const int n )
+	{
+		m_NumCam = n;
+	}
+
 private:
 
+	int m_NumCam;
+
     // the OpenCV video m_Capture object
-    cv::VideoCapture m_Capture;
+	vector<cv::VideoCapture> m_Capture;
 
     // the callback function to be called
     // for the processing of each frame
-    void( *m_Process ) ( cv::Mat&, cv::Mat& );
+    void( *m_Process ) ( vector<cv::Mat>&, vector<cv::Mat>& );
 
     // the pointer to the class implementing
     // the FrameProcessor interface
@@ -212,10 +222,10 @@ private:
     bool m_CallIt;
 
     // Input display window name
-    string m_WindowNameInput;
+	vector<string> m_WindowNameInput;
 
     // Output display window name
-    string m_WindowNameOutput;
+	vector<string> m_WindowNameOutput;
 
     // delay between each frame processing
     int m_Delay;
@@ -232,17 +242,8 @@ private:
     // to stop the processing
     bool m_Stop;
 
-    // vector of image filename to be used as input
-    vector<string> m_Images;
-
-    // image vector iterator
-    vector<string>::const_iterator m_ItImg;
-
-    // the OpenCV video writer object
-    cv::VideoWriter m_Writer;
-
     // output filename
-    string m_OutputFile;
+	vector<string> m_OutputFile;
 
     // current index for output Images
     int m_CurrentIndex;
@@ -253,24 +254,11 @@ private:
     // extension of output Images
     string m_Extension;
 
-    // extract only portion of the image
-    int m_InitPosX;
-
-    int m_InitPosY;
-
-    int m_OffsetX; //
-
-    int m_OffsetY; //
-
-    cv::Mat m_TmpFrame; // tmp frame
-
     // to get the next frame
-    // could be: video file; camera; vector of m_Images
-    bool ReadNextFrame( cv::Mat& frame );
+    bool ReadNextFrame( vector<cv::Mat>& frame );
 
     // to write the output frame
-    // could be: video file or m_Images
-    void WriteNextFrame( cv::Mat& frame );
+    void WriteNextFrame( vector<cv::Mat>& frame );
 
 }; // class LiveViewProcessor
 
