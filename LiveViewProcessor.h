@@ -151,7 +151,7 @@ public:
 
 		for ( int i = 0; i < s; i++ )
 		{
-			isOpen = isOpen && m_Capture[i].isOpened;
+			isOpen = isOpen && m_Capture[i].isOpened || !m_Images[i].empty();
 		}
 
         return isOpen;
@@ -241,6 +241,12 @@ private:
 
     // to stop the processing
     bool m_Stop;
+
+	// vector of image filename to be used as input
+	vector<vector<string>> m_Images;
+
+	// image vector iterator
+	vector<vector<string>::const_iterator> m_ItImg;
 
     // output filename
 	vector<string> m_OutputFile;

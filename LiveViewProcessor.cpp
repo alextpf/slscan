@@ -24,14 +24,31 @@ LiveViewProcessor::LiveViewProcessor()
 bool LiveViewProcessor::ReadNextFrame( vector<cv::Mat>& frame )
 {
 	bool ok( true );
-
-	//////////////////////////
-	// it's video or webcam
-	//////////////////////////
 	for ( int i = 0; i < m_NumCam; i++ )
 	{
 		cv::Mat tmp;
-		ok = ok && m_Capture[i].read( tmp );
+
+		if ( m_Images[i].size() == 0 )
+		{
+			//////////////////////////
+			// it's video or webcam
+			//////////////////////////
+			ok = ok && m_Capture[i].read( tmp );
+		}
+		else
+		{
+			////////////////
+			// it's images
+			////////////////
+			if ( m_ItImg[i] != m_Images[i].end() )
+			{
+				//printf( "%s\n", ( *m_ItImg[i] ).c_str() ); // debug: print file path
+				tmp = cv::imread( *(m_ItImg[i]) );
+				m_ItImg[i]++;
+
+				ok = ok && tmp.data != 0;
+			}
+		}
 
 		if ( ok && m_DownSampleRate > 1 )
 		{
@@ -40,7 +57,6 @@ bool LiveViewProcessor::ReadNextFrame( vector<cv::Mat>& frame )
 
 		frame.push_back( tmp );
 	}
-
     return ok;
 }
 
@@ -72,6 +88,7 @@ bool LiveViewProcessor::SetInput( vector<std::string> filename )
 	for ( int i = 0; i < m_NumCam; i++ )
 	{
 		m_Capture[i].release();
+		m_Images[i].clear();
 		ok = ok && m_Capture[i].open( filename[i] );
 	}
 
@@ -90,6 +107,7 @@ bool LiveViewProcessor::SetInput( vector<int> id )
 	for ( int i = 0; i < m_NumCam; i++ )
 	{
 		m_Capture[i].release();
+		m_Images[i].clear();
 		m_Capture[i].set( CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
 		m_Capture[i].set( CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
 		ok = ok && m_Capture[i].open( id[i] );
@@ -100,7 +118,7 @@ bool LiveViewProcessor::SetInput( vector<int> id )
 }
 
 //=======================================================================
-void LiveViewProcessor::SetInput( const std::vector<std::string>& imgs )
+void LiveViewProcessor::SetInput( const vector<vector<std::string>>& imgs )
 {
     m_TotalFrame = 0;
     // In case a resource was already
