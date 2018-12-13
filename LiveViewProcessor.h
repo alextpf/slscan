@@ -30,13 +30,13 @@ public:
     LiveViewProcessor();
 
     // set the name of the video file
-    bool SetInput( vector<string> filename );
+    bool SetInput( vector<string> filename /*video names*/ );
 
     // set the camera ID
-    bool SetInput( vector<int> id );
+    bool SetInput( vector<int> id /*webcam id*/ );
 
     // set the vector of input m_Images
-    void SetInput( const vector<vector<string>>& imgs );
+    void SetInput( const vector<vector<string>>& imgs /*sets of img sequence*/ );
 
     // set the output as a series of image files
     // extension must be ".jpg", ".bmp" ...

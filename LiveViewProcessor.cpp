@@ -78,9 +78,10 @@ void LiveViewProcessor::WriteNextFrame( vector<cv::Mat>& frame )
 }
 
 //=======================================================================
-bool LiveViewProcessor::SetInput( vector<std::string> filename )
+bool LiveViewProcessor::SetInput( vector<std::string> filename /*of video*/ )
 {
     m_TotalFrame = 0;
+
     // In case a resource was already
     // associated with the VideoCapture instance
 	bool ok( true );
@@ -89,15 +90,16 @@ bool LiveViewProcessor::SetInput( vector<std::string> filename )
 	{
 		m_Capture[i].release();
 		m_Images[i].clear();
+
+		// Open the video file
 		ok = ok && m_Capture[i].open( filename[i] );
 	}
 
-    // Open the video file
 	return ok;
 }
 
 //=======================================================================
-bool LiveViewProcessor::SetInput( vector<int> id )
+bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
 {
     m_TotalFrame = 0;
 	bool ok( true );
