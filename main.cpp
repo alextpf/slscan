@@ -180,10 +180,10 @@ int main()
 			sprintf_s(buffer, "%s%s.mp4", inPath, filename);
 
 			std::string name = buffer;
-			if (!processor.SetInput(name))
+			/*if (!processor.SetInput(name))
 			{
 				std::cout << "open file error" << std::endl;
-			}
+			}*/
 		}
 		break;
 
@@ -192,7 +192,7 @@ int main()
 			/////////////////////////
 			// input: webcam
 			/////////////////////////
-			processor.SetInput( webCamId ); //webcam
+			//processor.SetInput( webCamId ); //webcam
 		}
 		break;
 
@@ -213,7 +213,7 @@ int main()
 			char buffer[100];
 			sprintf_s(buffer, "%s%s", outPath, filename);
 
-			processor.SetOutput(buffer, ".jpg");
+			//processor.SetOutput(buffer, ".jpg");
 		}
 		break;
 
@@ -229,7 +229,7 @@ int main()
 			int fps = 30;
 			//int codec = CV_FOURCC( 'P', 'I', 'M', '1' );
 
-			processor.SetOutput( buffer, codec, fps );
+			//processor.SetOutput( buffer, codec, fps );
 		}
 		break;
 
@@ -245,13 +245,13 @@ int main()
 	// Declare a window to display the video
 	if ( showOutputImg )
 	{
-		processor.DisplayOutput( "Test Output" );
+		//processor.DisplayOutput( "Test Output" );
 	}
 
 	// Declare a window to display the input
 	if ( showInputImg )
 	{
-		processor.DisplayInput( "Input" );
+		//processor.DisplayInput( "Input" );
 	}
 
 	if (!processor.SetFrameNumber(startFrame))

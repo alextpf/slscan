@@ -19,7 +19,7 @@ public:
 	{}
 
 	// processing method
-    virtual void Process( cv::Mat &input, cv::Mat &output ) = 0;
+    virtual void Process( vector<cv::Mat> &input, vector<cv::Mat> &output ) = 0;
 	bool m_Debug;
 }; // class FrameProcessor
 
@@ -71,26 +71,35 @@ public:
     }
 
     // to display the processed frames
-    void DisplayInput( string wn )
+    void DisplayInput( vector<string> wn )
     {
-        m_WindowNameInput = wn;
-        cv::namedWindow( m_WindowNameInput );
+        for( int i = 0; i < m_NumCam; i++ )
+        {
+            m_WindowNameInput[i] = wn[i];
+            cv::namedWindow( m_WindowNameInput[i] );
+        }
     }
 
     // to display the processed frames
-    void DisplayOutput( string wn )
+    void DisplayOutput( vector<string> wn )
     {
-        m_WindowNameOutput = wn;
-        cv::namedWindow( m_WindowNameOutput );
+        for( int i = 0; i < m_NumCam; i++ )
+        {
+            m_WindowNameOutput[i] = wn[i];
+            cv::namedWindow( m_WindowNameOutput[i] );
+        }
     }
 
     // do not display the processed frames
     void DontDisplay()
     {
-        cv::destroyWindow( m_WindowNameInput );
-        cv::destroyWindow( m_WindowNameOutput );
-        m_WindowNameInput.clear();
-        m_WindowNameOutput.clear();
+        for( int i = 0; i < m_NumCam; i++ )
+        {
+            cv::destroyWindow( m_WindowNameInput[i] );
+            cv::destroyWindow( m_WindowNameOutput[i] );
+            m_WindowNameInput[i].clear();
+            m_WindowNameOutput[i].clear();
+        }
     }
 
     // set a m_Delay between each frame
@@ -123,10 +132,10 @@ public:
     bool SetFrameNumber( long pos );
 
     // go to this position
-    bool SetPositionMS( double pos );
+    bool SetPositionMS( double pos /*in ms, for vid or cam*/ );
 
     // go to this position expressed in fraction of total film length
-    bool SetRelativePosition( double pos );
+    bool SetRelativePosition( double pos /*in %*/ );
 
     // Stop the processing
     void StopIt()
@@ -151,30 +160,10 @@ public:
 
 		for ( int i = 0; i < s; i++ )
 		{
-			isOpen = isOpen && m_Capture[i].isOpened || !m_Images[i].empty();
+			isOpen = isOpen && ( m_Capture[i].isOpened() || !m_Images[i].empty() );
 		}
 
         return isOpen;
-    }
-
-    void SetInitPosX( int x )
-    {
-        m_InitPosX = x;
-    }
-
-    void SetInitPosY( int y )
-    {
-        m_InitPosY = y;
-    }
-
-    void SetOffsetX( int x )
-    {
-        m_OffsetX = x;
-    }
-
-    void SetOffsetY( int y )
-    {
-        m_OffsetX = y;
     }
 
     // to grab (and Process) the frames of the sequence
@@ -192,7 +181,7 @@ public:
         return m_DownSampleRate;
     }
 
-	string GetInputWinName()
+	vector<string> GetInputWinName()
 	{
 		return m_WindowNameInput;
 	}

@@ -120,21 +120,25 @@ bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
 }
 
 //=======================================================================
-void LiveViewProcessor::SetInput( const vector<vector<std::string>>& imgs )
+void LiveViewProcessor::SetInput( const vector<vector<std::string>>& imgs /*sets of img sequence*/ )
 {
     m_TotalFrame = 0;
-    // In case a resource was already
-    // associated with the VideoCapture instance
-    m_Capture.release();
 
-    // the input will be this vector of m_Images
-    m_Images = imgs;
-    m_ItImg = m_Images.begin();
+    for( int i = 0; i < m_NumCam; i++ )
+    {
+        // In case a resource was already
+        // associated with the VideoCapture instance
+        m_Capture[i].release();
+
+        // the input will be this vector of m_Images
+        m_Images[i] = imgs[i];
+        m_ItImg[i] = m_Images[i].begin();
+    }
 }
 
 //=======================================================================
 bool LiveViewProcessor::SetOutput(
-    const std::string& filename, // filename prefix
+    const vector<std::string>& filename, // filename prefix
     const std::string& ext, // image file m_Extension
     int numberOfDigits,   // number of digits
     int startIndex )
@@ -146,7 +150,11 @@ bool LiveViewProcessor::SetOutput(
     }
 
     // filenames and their common m_Extension
-    m_OutputFile = filename;
+    for( int i = 0; i < m_NumCam; i++ )
+    {
+        m_OutputFile[i] = filename[i];
+    }
+
     m_Extension = ext;
 
     // number of m_Digits in the file numbering scheme
@@ -158,7 +166,7 @@ bool LiveViewProcessor::SetOutput(
 }
 
 //=======================================================================
-void LiveViewProcessor::SetFrameProcessor( void( *frameProcessingCallback )( cv::Mat&, cv::Mat& ) )
+void LiveViewProcessor::SetFrameProcessor( void( *frameProcessingCallback )( vector<cv::Mat>&, vector<cv::Mat>& ) )
 {
     // invalidate frame processor class instance
     m_FrameProcessor = 0;
@@ -184,11 +192,11 @@ void LiveViewProcessor::SetFrameProcessor( FrameProcessor* frameProcessorPtr )
 //=======================================================================
 cv::Size LiveViewProcessor::GetFrameSize()
 {
-    if( m_Images.size() == 0 )
+    if( m_Images[0].size() == 0 )
     {
         // get size of from the m_Capture device
-        int w = static_cast<int>( m_Capture.get( CV_CAP_PROP_FRAME_WIDTH ) );
-        int h = static_cast<int>( m_Capture.get( CV_CAP_PROP_FRAME_HEIGHT ) );
+        int w = static_cast<int>( m_Capture[0].get( CV_CAP_PROP_FRAME_WIDTH ) );
+        int h = static_cast<int>( m_Capture[0].get( CV_CAP_PROP_FRAME_HEIGHT ) );
 
 		if (m_DownSampleRate > 1)
 		{
@@ -201,7 +209,7 @@ cv::Size LiveViewProcessor::GetFrameSize()
     else
     {
         // if input is vector of images
-        cv::Mat tmp = cv::imread( m_Images[0] );
+        cv::Mat tmp = cv::imread( m_Images[0][0] );
         if( !tmp.data )
         {
             return cv::Size( 0, 0 );
@@ -224,16 +232,16 @@ cv::Size LiveViewProcessor::GetFrameSize()
 //=======================================================================
 long LiveViewProcessor::GetFrameNumber()
 {
-    if( m_Images.size() == 0 )
+    if( m_Images[0].size() == 0 )
     {
         // get info of from the m_Capture device
-        long f = static_cast<long>( m_Capture.get( CV_CAP_PROP_POS_FRAMES ) );
+        long f = static_cast<long>( m_Capture[0].get( CV_CAP_PROP_POS_FRAMES ) );
         return f;
     }
     else
     {
         // if input is vector of m_Images
-        return static_cast<long>( m_ItImg - m_Images.begin() );
+        return static_cast<long>( m_ItImg[0] - m_Images[0].begin() );
     }
 }
 
@@ -241,12 +249,12 @@ long LiveViewProcessor::GetFrameNumber()
 double LiveViewProcessor::GetPositionMS()
 {
     // undefined for vector of m_Images
-    if( m_Images.size() != 0 )
+    if( m_Images[0].size() != 0 )
     {
         return 0.0;
     }
 
-    double t = m_Capture.get( CV_CAP_PROP_POS_MSEC );
+    double t = m_Capture[0].get( CV_CAP_PROP_POS_MSEC );
     return t;
 }
 
@@ -254,12 +262,12 @@ double LiveViewProcessor::GetPositionMS()
 double LiveViewProcessor::GetFrameRate()
 {
     // undefined for vector of m_Images
-    if( m_Images.size() != 0 )
+    if( m_Images[0].size() != 0 )
     {
         return 0;
     }
 
-    double r = m_Capture.get( CV_CAP_PROP_FPS );
+    double r = m_Capture[0].get( CV_CAP_PROP_FPS );
     return r;
 }
 
@@ -267,12 +275,12 @@ double LiveViewProcessor::GetFrameRate()
 long LiveViewProcessor::GetTotalFrameCount()
 {
     // for vector of m_Images
-    if( m_Images.size() != 0 )
+    if( m_Images[0].size() != 0 )
     {
-        return static_cast<long>( m_Images.size() );
+        return static_cast<long>( m_Images[0].size() );
     }
 
-    long t = static_cast<long>( m_Capture.get( CV_CAP_PROP_FRAME_COUNT ) );
+    long t = static_cast<long>( m_Capture[0].get( CV_CAP_PROP_FRAME_COUNT ) );
     return t;
 }
 
@@ -280,7 +288,7 @@ long LiveViewProcessor::GetTotalFrameCount()
 int LiveViewProcessor::GetCodec( char codec[4] )
 {
     // undefined for vector of m_Images
-    if( m_Images.size() != 0 )
+    if( m_Images[0].size() != 0 )
     {
         return -1;
     }
@@ -291,7 +299,7 @@ int LiveViewProcessor::GetCodec( char codec[4] )
         char code[4];
     } returned;
 
-    returned.value = static_cast<int>( m_Capture.get( CV_CAP_PROP_FOURCC ) );
+    returned.value = static_cast<int>( m_Capture[0].get( CV_CAP_PROP_FOURCC ) );
 
     codec[0] = returned.code[0];
     codec[1] = returned.code[1];
@@ -304,69 +312,85 @@ int LiveViewProcessor::GetCodec( char codec[4] )
 //=======================================================================
 bool LiveViewProcessor::SetFrameNumber( long pos )
 {
-    // for vector of m_Images
-    if( m_Images.size() != 0 )
+    bool ok( true );
+
+    for( int i = 0; i < m_NumCam; i++ )
     {
-		if (pos > m_Images.size())
-		{
-			return false;
-		}
-		else
-		{
-			// move to position in vector
-			m_ItImg = m_Images.begin() + pos;
-			return true;
-		}
+        // for vector of m_Images
+        if( m_Images[i].size() != 0 )
+        {
+            if( pos > m_Images[0].size() )
+            {
+                return false;
+            }
+            else
+            {
+                // move to position in vector
+                m_ItImg[i] = m_Images[0].begin() + pos;
+            }
+        }
+        else
+        {
+            // if input is a m_Capture device or video
+            ok = ok && m_Capture[i].set( CV_CAP_PROP_POS_FRAMES, pos );
+        }
     }
-    else
-    {
-        // if input is a m_Capture device
-		//return m_Capture.set( CV_CAP_PROP_POS_FRAMES, pos );
-		return true;
-    }
+
+    return ok;
 }
 
 //=======================================================================
-bool LiveViewProcessor::SetPositionMS( double pos )
+bool LiveViewProcessor::SetPositionMS( double pos /*in ms, for vid or cam*/)
 {
     // not defined in vector of m_Images
-    if( m_Images.size() != 0 )
+    if( m_Images[0].size() != 0 )
     {
         return false;
     }
     else
     {
-        return m_Capture.set( CV_CAP_PROP_POS_MSEC, pos );
+        for( int i = 0; i < m_NumCam; i++ )
+        {
+            return m_Capture[i].set( CV_CAP_PROP_POS_MSEC, pos );
+        }
     }
 }
 
 //=======================================================================
-bool LiveViewProcessor::SetRelativePosition( double pos )
+bool LiveViewProcessor::SetRelativePosition( double pos /*in %*/)
 {
-    // for vector of m_Images
-    if( m_Images.size() != 0 )
-    {
-        // move to position in vector
-        long posI = static_cast<long>( pos*m_Images.size() + 0.5 );
-        m_ItImg = m_Images.begin() + posI;
+    bool ok( true );
 
-        // is it a valid position?
-        return posI < m_Images.size();
-    }
-    else
+    for( int i = 0; i < m_NumCam; i++ )
     {
-        // if input is a m_Capture device
-        return m_Capture.set( CV_CAP_PROP_POS_AVI_RATIO, pos );
+        // for vector of m_Images
+        if( m_Images[i].size() != 0 )
+        {
+            // move to position in vector
+            long posI = static_cast<long>( pos * m_Images[i].size() + 0.5 );
+            m_ItImg[i] = m_Images[i].begin() + posI;
+
+            // is it a valid position?
+            ok = ok && posI < m_Images[i].size();
+        }
+        else
+        {
+            // if input is a m_Capture device
+            ok = ok && m_Capture[i].set( CV_CAP_PROP_POS_AVI_RATIO, pos );
+        }
     }
+
+    return ok;
 }// SetRelativePosition
 
 //=======================================================================
 void LiveViewProcessor::Run()
 {
     // current frame
-    cv::Mat frame;
+    vector<cv::Mat> frame;
+
     // output frame
-    cv::Mat output;
+    vector<cv::Mat> output;
 
     // if no m_Capture device has been set
     if( !IsOpened() )
@@ -378,15 +402,15 @@ void LiveViewProcessor::Run()
 
     while( !IsStopped() )
     {
-		// if there's no window created, hit Esc on the command window should also exit
-		if ( _kbhit() )
-		{
-			int key = _getch();
-			if ( key == 27/*Esc*/ )
-			{
-				StopIt();
-			}
-		}
+        // if there's no window created, hit Esc on the command window should also exit
+        if( _kbhit() )
+        {
+            int key = _getch();
+            if( key == 27/*Esc*/ )
+            {
+                StopIt();
+            }
+        }
 
         // read next frame if any
         if( !ReadNextFrame( frame ) )
@@ -395,9 +419,12 @@ void LiveViewProcessor::Run()
         }
 
         // display input frame
-        if( m_WindowNameInput.length() != 0 )
+        for( int i = 0; i < m_NumCam; i++ )
         {
-            cv::imshow( m_WindowNameInput, frame );
+            if( m_WindowNameInput[i].length() != 0 )
+            {
+                cv::imshow( m_WindowNameInput[i], frame[i] );
+            }
         }
 
         // calling the m_Process function or method
@@ -419,18 +446,20 @@ void LiveViewProcessor::Run()
         }
 
         m_TotalFrame++;
-        //std::cout << m_TotalFrame << std::endl;//print the number for debug
 
         // write output sequence
-        if( m_OutputFile.length() != 0 )
+        if( m_OutputFile[0].length() != 0 )
         {
             WriteNextFrame( output );
         }
 
         // display output frame
-        if( m_WindowNameOutput.length() != 0 )
+        for( int i = 0; i < m_NumCam; i++ )
         {
-            cv::imshow( m_WindowNameOutput, output );
+            if( m_WindowNameOutput[i].length() != 0 )
+            {
+                cv::imshow( m_WindowNameOutput[i], output[i] );
+            }
         }
 
         // introduce a delay
