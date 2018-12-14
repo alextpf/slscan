@@ -8,6 +8,12 @@ public:
 	Calibrator::Calibrator();//ctor
 
 	void Run() override;
+
+    int GetNumCaliImgs() const
+    {
+        return m_NumCaliImgs;
+    }
+
 private:
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
 

@@ -82,9 +82,9 @@ public:
     // to display the processed frames
     void DisplayInput( vector<string> wn )
     {
-        for( int i = 0; i < m_NumCam; i++ )
+        for( int i = 0; i < m_NumSource; i++ )
         {
-            m_WindowNameInput[i] = wn[i];
+            m_WindowNameInput.push_back( wn[i] );
             cv::namedWindow( m_WindowNameInput[i] );
         }
     }
@@ -92,9 +92,9 @@ public:
     // to display the processed frames
     void DisplayOutput( vector<string> wn )
     {
-        for( int i = 0; i < m_NumCam; i++ )
+        for( int i = 0; i < m_NumSource; i++ )
         {
-            m_WindowNameOutput[i] = wn[i];
+            m_WindowNameOutput.push_back( wn[i] );
             cv::namedWindow( m_WindowNameOutput[i] );
         }
     }
@@ -102,7 +102,7 @@ public:
     // do not display the processed frames
     void DontDisplay()
     {
-        for( int i = 0; i < m_NumCam; i++ )
+        for( int i = 0; i < m_NumSource; i++ )
         {
             cv::destroyWindow( m_WindowNameInput[i] );
             cv::destroyWindow( m_WindowNameOutput[i] );
@@ -195,14 +195,14 @@ public:
 		return m_WindowNameInput;
 	}
 
-	void SetNumCam( const int n )
+	void SetNumSource( const int n )
 	{
-		m_NumCam = n;
+		m_NumSource = n;
 	}
 
 protected:
 
-	int m_NumCam;
+	int m_NumSource;
 
     // the OpenCV video m_Capture object
 	vector<cv::VideoCapture> m_Capture;

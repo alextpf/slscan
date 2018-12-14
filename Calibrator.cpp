@@ -33,7 +33,7 @@ void Calibrator::Run()
 		}
 
 		// display input frame
-		for ( int i = 0; i < m_NumCam; i++ )
+		for ( int i = 0; i < m_NumSource; i++ )
 		{
 			if ( m_WindowNameInput[i].length() != 0 )
 			{
@@ -47,7 +47,7 @@ void Calibrator::Run()
 		output = frame;
 
 		// display output frame
-		for ( int i = 0; i < m_NumCam; i++ )
+		for ( int i = 0; i < m_NumSource; i++ )
 		{
 			if ( m_WindowNameOutput[i].length() != 0 )
 			{

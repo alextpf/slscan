@@ -27,6 +27,14 @@ enum OPERATION {
 	AUTO_SCAN,
 	EXIT
 };
+
+enum SOURCE_TYPE {
+    IMG = 0,
+    VIDEO,
+    WEBCAM,
+    NONE
+};
+
 //======================================
 //fwd declare
 void SetParams();
@@ -37,13 +45,12 @@ char outPath[256];
 char filename[256];
 int webCamId; // 0: default (laptop's camera), 1: external connected cam
 
-int inputType( 0 ); // 0: imgs, 1: video, 2: webcam
-int outputType( 0 ); // 0: imgs, 1: video, 2: webcam
+SOURCE_TYPE inputType( WEBCAM ); // 0: imgs, 1: video, 2: webcam
+SOURCE_TYPE outputType( IMG ); // 0: imgs, 1: video, 2: webcam
 int delay( 0 );
 bool showOutputImg( false );
 bool showInputImg( false );
 
-shared_ptr<LiveViewProcessor> processor;
 
 OPERATION op( CAPTURE_CALI_LEFT );
 //==========================================
@@ -79,24 +86,73 @@ int main()
         op = MainMenu();
         switch( op )
         {
-        case CAPTURE_CALI_LEFT:
-        {
-            // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
-            sprintf_s( inPath, "../cali_data/left/" );
-            sprintf_s( outPath, "../cali_data/left/" );
-            sprintf_s( filename, "cali_left" );
-            inputType = 2; // webcam
-            outputType = 2; // none
-            delay = 1;
-            webCamId = 1;
-			processor = make_shared<Calibrator>();
+            case CAPTURE_CALI_LEFT:
+            {
+                // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+                sprintf_s( inPath, "../cali_data/left/" );
+                sprintf_s( outPath, "../cali_data/left/" );
+                sprintf_s( filename, "cali_left" );
+                inputType = WEBCAM;
+                outputType = NONE;
 
-			processor->SetNumCam( 1 ); // only 1 camera
+                delay = 1;
+                webCamId = 1;
+                shared_ptr<Calibrator> processor = make_shared<Calibrator>();// instantiate a Calibrator
 
-            showOutputImg = true;
-            showInputImg = true;
-        }
-        break;
+			    processor->SetNumSource( 1 ); // only 1 camera
+
+                string title = "Left Cam";
+                vector<string> wn;
+                wn.push_back( title );
+                processor->DisplayOutput( wn );
+
+                //====================================
+                switch( inputType )
+                {
+                    case IMG:
+                    {
+                        const int startFrame = 0;// frame number we want to start at
+                        const int endFrame = processor->GetNumCaliImgs();
+
+                        vector<vector<std::string>> imgs;
+
+                        vector<std::string> tmp;
+
+                        for( int i = 0; i < endFrame; i++ )
+                        {
+                            char buffer[100];
+                            sprintf_s( buffer, "%s%s%03i.jpg", inPath, filename, i );
+
+                            std::string name = buffer;
+                            tmp.push_back( name );
+                        }
+                        imgs.push_back( tmp );
+
+                        processor->SetInput( imgs );
+                    } // case IMG
+                    break;
+
+                    case WEBCAM:
+                    {
+                        vector<int> id;
+                        id.push_back(webCamId);
+
+                        bool ok = processor->SetInput( id ); //webcam
+                        if( !ok )
+                        {
+                            cout << "Can't open webcam/n";
+                        }
+                    }// case WEBCAM
+                    break;
+
+                    default:
+                        break;
+                }//switch inputtype
+
+                 // Start the Process
+                processor->Run();
+            }//case CAPTURE_CALI_LEFT:
+            break;
 
         case CAPTURE_CALI_RIGHT:
         {
@@ -104,13 +160,15 @@ int main()
             sprintf_s( inPath, "../cali_data/right/" );
             sprintf_s( outPath, "../cali_data/right/" );
             sprintf_s( filename, "cali_right" );
-            inputType = 2; // webcam
-            outputType = 0; // imgs
-            delay = 0; // wait indefinitely, untill any of the above charaters is hit ('c','a','r','Esc')
+            inputType = WEBCAM;
+            outputType = NONE;
+
+            delay = 1;
             webCamId = 2;
 
             showOutputImg = true;
             showInputImg = true;
+
         }
         break;
 
@@ -143,10 +201,6 @@ int main()
 
 
         }// switch
-		SetParams();
-
-		// Start the Process
-		processor->Run();
 
 	} // while ( op != EXIT )
 
@@ -159,119 +213,10 @@ void SetParams()
 	// variables
 	//////////////////
 
-	const int startFrame = 0;// frame number we want to start at
-	const int endFrame = 837;
-	FrameProcessor * proc = NULL;
-
 	//cout << '\a';
 	//Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
 	//cin.get(); // wait
 	//return 0;
-
-	/////////////////////////////////////////////////////
-	// Input
-	/////////////////////////////////////////////////////
-	switch ( inputType )
-	{
-	case 0:
-	{
-		/////////////////////////
-		// input: images
-		/////////////////////////
-		std::vector<std::string> imgs;
-
-		for ( int i = 0; i < endFrame; i++ )
-		{
-			char buffer[100];
-			sprintf_s( buffer, "%s%s%03i.jpg", inPath, filename, i );
-
-			std::string name = buffer;
-			imgs.push_back( name );
-		}
-
-		processor->SetInput( imgs );
-	}
-	break;
-
-	case 1:
-	{
-		/////////////////////////
-		// input: video
-		/////////////////////////
-		char buffer[100];
-		sprintf_s( buffer, "%s%s.mp4", inPath, filename );
-
-		std::string name = buffer;
-		/*if (!processor->SetInput(name))
-		{
-		std::cout << "open file error" << std::endl;
-		}*/
-	}
-	break;
-
-	case 2:
-	{
-		/////////////////////////
-		// input: webcam
-		/////////////////////////
-		//processor->SetInput( webCamId ); //webcam
-	}
-	break;
-
-	default:
-		break;
-	} //switch (inputType)
-
-	  /////////////////////////////////////////////////////
-	  // Output
-	  /////////////////////////////////////////////////////
-	switch ( outputType )
-	{
-	case 0:
-	{
-		/////////////////////////
-		// output: images
-		/////////////////////////
-		char buffer[100];
-		sprintf_s( buffer, "%s%s", outPath, filename );
-
-		//processor->SetOutput(buffer, ".jpg");
-	}
-	break;
-
-	case 1:
-	{
-		/////////////////////////
-		// output: video
-		/////////////////////////
-		char buffer[100];
-		sprintf_s( buffer, "%s%s.mp4", outPath, filename );
-
-		int codec = CV_FOURCC( 'D', 'I', 'V', 'X' );
-		int fps = 30;
-		//int codec = CV_FOURCC( 'P', 'I', 'M', '1' );
-
-		//processor->SetOutput( buffer, codec, fps );
-	}
-	break;
-
-	// case 2:// no output
-
-	default:
-		break;
-	}//switch (outputType)
-
-	 // Declare a window to display the video
-	if ( showOutputImg )
-	{
-		//processor->DisplayOutput( "Test Output" );
-	}
-
-	// Declare a window to display the input
-	if ( showInputImg )
-	{
-		//processor->DisplayInput( "Input" );
-	}
 
 	/*if ( !processor->SetFrameNumber( startFrame ) )
 	{
@@ -279,6 +224,5 @@ void SetParams()
 		return ;
 	}
 */
-	processor->SetDelay( delay );
 
-}
+}//SetParams

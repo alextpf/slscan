@@ -17,14 +17,14 @@ LiveViewProcessor::LiveViewProcessor()
 , m_FrameToStop( -1 )
 , m_TwoFrameProcess( 0 )
 , m_TwoFrameProcessor( 0 )
-, m_NumCam( 0 )
+, m_NumSource( 0 )
 {}
 
 //=======================================================================
 bool LiveViewProcessor::ReadNextFrame( vector<cv::Mat>& frame )
 {
 	bool ok( true );
-	for ( int i = 0; i < m_NumCam; i++ )
+	for ( int i = 0; i < m_NumSource; i++ )
 	{
 		cv::Mat tmp;
 
@@ -68,7 +68,7 @@ void LiveViewProcessor::WriteNextFrame( vector<cv::Mat>& frame )
         ////////////////
         // it's images
         ////////////////
-		for ( int i = 0; i < m_NumCam; i++ )
+		for ( int i = 0; i < m_NumSource; i++ )
 		{
 			std::stringstream ss;
 			ss << m_OutputFile[i] << std::setfill( '0' ) << std::setw( m_Digits ) << m_CurrentIndex++ << m_Extension;
@@ -86,7 +86,7 @@ bool LiveViewProcessor::SetInput( vector<std::string> filename /*of video*/ )
     // associated with the VideoCapture instance
 	bool ok( true );
 
-	for ( int i = 0; i < m_NumCam; i++ )
+	for ( int i = 0; i < m_NumSource; i++ )
 	{
 		m_Capture[i].release();
 		m_Images[i].clear();
@@ -106,12 +106,28 @@ bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
 
     // In case a resource was already
     // associated with the VideoCapture instance
-	for ( int i = 0; i < m_NumCam; i++ )
+    int numSource = m_Capture.size();
+
+    for( int i = 0; i < numSource; i++ )
+    {
+        m_Capture[i].release();
+    }
+    m_Capture.clear();
+
+    numSource = m_Images.size();
+    for( int i = 0; i < numSource; i++ )
+    {
+        m_Images[i].clear();
+    }
+    m_Images.clear();
+
+	for ( int i = 0; i < m_NumSource; i++ )
 	{
-		m_Capture[i].release();
-		m_Images[i].clear();
+        m_Capture.push_back( cv::VideoCapture() );
+
 		m_Capture[i].set( CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
 		m_Capture[i].set( CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
+
 		ok = ok && m_Capture[i].open( id[i] );
 	}
 
@@ -124,7 +140,7 @@ void LiveViewProcessor::SetInput( const vector<vector<std::string>>& imgs /*sets
 {
     m_TotalFrame = 0;
 
-    for( int i = 0; i < m_NumCam; i++ )
+    for( int i = 0; i < m_NumSource; i++ )
     {
         // In case a resource was already
         // associated with the VideoCapture instance
@@ -150,7 +166,7 @@ bool LiveViewProcessor::SetOutput(
     }
 
     // filenames and their common m_Extension
-    for( int i = 0; i < m_NumCam; i++ )
+    for( int i = 0; i < m_NumSource; i++ )
     {
         m_OutputFile[i] = filename[i];
     }
@@ -338,7 +354,7 @@ bool LiveViewProcessor::SetFrameNumber( long pos )
 {
     bool ok( true );
 
-    for( int i = 0; i < m_NumCam; i++ )
+    for( int i = 0; i < m_NumSource; i++ )
     {
         // for vector of m_Images
         if( m_Images[i].size() != 0 )
@@ -373,7 +389,7 @@ bool LiveViewProcessor::SetPositionMS( double pos /*in ms, for vid or cam*/)
     }
     else
     {
-        for( int i = 0; i < m_NumCam; i++ )
+        for( int i = 0; i < m_NumSource; i++ )
         {
             return m_Capture[i].set( CV_CAP_PROP_POS_MSEC, pos );
         }
@@ -386,7 +402,7 @@ bool LiveViewProcessor::SetRelativePosition( double pos /*in %*/)
 {
     bool ok( true );
 
-    for( int i = 0; i < m_NumCam; i++ )
+    for( int i = 0; i < m_NumSource; i++ )
     {
         // for vector of m_Images
         if( m_Images[i].size() != 0 )
@@ -444,7 +460,7 @@ void LiveViewProcessor::Run()
         }
 
         // display input frame
-        for( int i = 0; i < m_NumCam; i++ )
+        for( int i = 0; i < m_NumSource; i++ )
         {
             if( m_WindowNameInput[i].length() != 0 )
             {
@@ -479,7 +495,7 @@ void LiveViewProcessor::Run()
         }
 
         // display output frame
-        for( int i = 0; i < m_NumCam; i++ )
+        for( int i = 0; i < m_NumSource; i++ )
         {
             if( m_WindowNameOutput[i].length() != 0 )
             {
