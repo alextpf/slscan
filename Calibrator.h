@@ -14,6 +14,16 @@ public:
         return m_NumCaliImgs;
     }
 
+    void SetWidth( const unsigned int w )
+    {
+        m_ChessboardFinder.SetWidth( w );
+    }
+
+    void SetHeight( const unsigned int h )
+    {
+        m_ChessboardFinder.SetHeight( h );
+    }
+
 private:
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
 

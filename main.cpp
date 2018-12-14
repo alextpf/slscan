@@ -1,8 +1,9 @@
-#include <stdlib.h>
 #include <iostream>
+#include <stdlib.h>
 #include <conio.h>
 #include <windows.h> // WinApi header
 #include <memory>
+#include <fstream>      // std::ifstream
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -77,10 +78,38 @@ OPERATION MainMenu()
 
 } // MainMenu
 
+//=======================================================================
+bool ReadConfig( vector<int> & tmp, const int entries )
+{
+    string line;
+
+    ifstream configFile( "Config.ini" );
+
+    if( configFile.is_open() )
+    {
+        for( int i = 0; i < entries * 2; i++ )
+        {
+            getline( configFile, line );
+            if( i % 2 == 1 )
+            {
+                const int value = std::stoi( line );
+                tmp.push_back( value );
+            }
+        }
+        configFile.close();
+    }
+    else
+    {
+        std::cout << "file open error" << std::endl;
+        return false;
+    }
+
+    return true;
+} //ReadConfig
+
 //========================================
 int main()
 {
-
 	while ( op != EXIT )
 	{
         op = MainMenu();
@@ -88,6 +117,17 @@ int main()
         {
             case CAPTURE_CALI_LEFT:
             {
+                //////////////////////
+                // Read from config
+                //////////////////////
+                std::vector<int> tmp;
+                if( !ReadConfig( tmp, 2 ) ) // read configuration file
+                {
+                    return 0;
+                }
+                const unsigned int w = tmp[0]; // cali pattern width
+                const unsigned int h = tmp[1]; // cali pattern height
+
                 // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
                 sprintf_s( inPath, "../cali_data/left/" );
                 sprintf_s( outPath, "../cali_data/left/" );
@@ -95,11 +135,14 @@ int main()
                 inputType = WEBCAM;
                 outputType = NONE;
 
-                delay = 1;
-                webCamId = 1;
+                delay = 1; // ms
+                webCamId = 0;
                 shared_ptr<Calibrator> processor = make_shared<Calibrator>();// instantiate a Calibrator
 
 			    processor->SetNumSource( 1 ); // only 1 camera
+                processor->SetDelay( delay );
+                processor->SetWidth( w );
+                processor->SetHeight( h );
 
                 string title = "Left Cam";
                 vector<string> wn;
@@ -141,6 +184,7 @@ int main()
                         if( !ok )
                         {
                             cout << "Can't open webcam/n";
+                            return -1;
                         }
                     }// case WEBCAM
                     break;

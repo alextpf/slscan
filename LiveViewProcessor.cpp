@@ -23,17 +23,16 @@ LiveViewProcessor::LiveViewProcessor()
 //=======================================================================
 bool LiveViewProcessor::ReadNextFrame( vector<cv::Mat>& frame )
 {
-	bool ok( true );
+	bool ok = frame.size() > 0;
+
 	for ( int i = 0; i < m_NumSource; i++ )
 	{
-		cv::Mat tmp;
-
 		if ( m_Images.size() == 0 )
 		{
 			//////////////////////////
 			// it's video or webcam
 			//////////////////////////
-			ok = ok && m_Capture[i].read( tmp );
+			ok = ok && m_Capture[i].read( frame[i] );
 		}
 		else
 		{
@@ -43,19 +42,17 @@ bool LiveViewProcessor::ReadNextFrame( vector<cv::Mat>& frame )
 			if ( m_ItImg[i] != m_Images[i].end() )
 			{
 				//printf( "%s\n", ( *m_ItImg[i] ).c_str() ); // debug: print file path
-				tmp = cv::imread( *(m_ItImg[i]) );
+                frame[i] = cv::imread( *(m_ItImg[i]) );
 				m_ItImg[i]++;
 
-				ok = ok && tmp.data != 0;
+				ok = ok && frame[i].data != 0;
 			}
 		}
 
 		if ( ok && m_DownSampleRate > 1 )
 		{
-			cv::resize( tmp, tmp, cv::Size(), 1.0 / m_DownSampleRate, 1.0 / m_DownSampleRate );
+			cv::resize( frame[i], frame[i], cv::Size(), 1.0 / m_DownSampleRate, 1.0 / m_DownSampleRate );
 		}
-
-		frame.push_back( tmp );
 	}
     return ok;
 }
@@ -437,6 +434,12 @@ void LiveViewProcessor::Run()
     if( !IsOpened() )
     {
         return;
+    }
+
+    for( int i = 0; i < m_NumSource; i++ )
+    {
+        frame.push_back( cv::Mat() );
+        output.push_back( cv::Mat() );
     }
 
     m_Stop = false;

@@ -21,11 +21,16 @@ void Calibrator::Run()
 		return;
 	}
 
+    for( int i = 0; i < m_NumSource; i++ )
+    {
+        frame.push_back( cv::Mat() );
+        output.push_back( cv::Mat() );
+    }
+
 	m_Stop = false;
 
 	while ( !IsStopped() )
 	{
-
 		// read next frame if any
 		if ( !ReadNextFrame( frame ) )
 		{
@@ -33,12 +38,12 @@ void Calibrator::Run()
 		}
 
 		// display input frame
-		for ( int i = 0; i < m_NumSource; i++ )
-		{
-			if ( m_WindowNameInput[i].length() != 0 )
-			{
-				cv::imshow( m_WindowNameInput[i], frame[i] );
-			}
+        if( m_WindowNameInput.size() > 0 )
+        {
+            for( int i = 0; i < m_NumSource; i++ )
+            {
+                cv::imshow( m_WindowNameInput[i], frame[i] );
+            }
 		}
 
 		// check whether capture or start calibration
@@ -47,12 +52,12 @@ void Calibrator::Run()
 		output = frame;
 
 		// display output frame
-		for ( int i = 0; i < m_NumSource; i++ )
-		{
-			if ( m_WindowNameOutput[i].length() != 0 )
-			{
-				cv::imshow( m_WindowNameOutput[i], output[i] );
-			}
+        if( m_WindowNameOutput.size() > 0 )
+        {
+            for( int i = 0; i < m_NumSource; i++ )
+            {
+                cv::imshow( m_WindowNameOutput[i], output[i] );
+            }
 		}
 
 		// check if we should stop
@@ -77,8 +82,11 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 		// capture, and find chessboard corners
 		/*cv::Mat in = frame[0];
 		cv::Mat out = output[0];
-		m_ChessboardFinder.Process( in, out );*/
+		m_ChessboardFinder.Process( in, out );
 
+        // show the corners on output window
+        cv::imshow( m_WindowNameOutput[0], out );
+        */
 		bool needAnswer( true );
 		while ( needAnswer )
 		{
