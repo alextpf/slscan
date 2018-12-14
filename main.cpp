@@ -2,6 +2,7 @@
 #include <iostream>
 #include <conio.h>
 #include <windows.h> // WinApi header
+#include <memory>
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -9,12 +10,14 @@
 #include <opencv2/imgproc.hpp>
 
 #include "LiveViewProcessor.h"
+#include "Calibrator.h"
 
 using namespace cv;
 using namespace std;
 
+//======================================
 enum OPERATION {
-	CAPTURE_CALI_LEFT = 0,
+	CAPTURE_CALI_LEFT = 1,
 	CAPTURE_CALI_RIGHT,
 	CAPTURE_CALI_LEFT_RIGHT,
 	CALIBRATE_LEFT,
@@ -24,7 +27,26 @@ enum OPERATION {
 	AUTO_SCAN,
 	EXIT
 };
+//======================================
+//fwd declare
+void SetParams();
+//======================================
+//globals
+char inPath[256];
+char outPath[256];
+char filename[256];
+int webCamId; // 0: default (laptop's camera), 1: external connected cam
 
+int inputType( 0 ); // 0: imgs, 1: video, 2: webcam
+int outputType( 0 ); // 0: imgs, 1: video, 2: webcam
+int delay( 0 );
+bool showOutputImg( false );
+bool showInputImg( false );
+
+shared_ptr<LiveViewProcessor> processor;
+
+OPERATION op( CAPTURE_CALI_LEFT );
+//==========================================
 OPERATION MainMenu()
 {
 	system( "CLS" ); // clear prompt command
@@ -51,20 +73,7 @@ OPERATION MainMenu()
 //========================================
 int main()
 {
-    char inPath[256];
-    char outPath[256];
-    char filename[256];
-    int webCamId; // 0: default (laptop's camera), 1: external connected cam
 
-    int inputType( 0 ); // 0: imgs, 1: video, 2: webcam
-    int outputType( 0 ); // 0: imgs, 1: video, 2: webcam
-    int delay( 0 );
-    bool showOutputImg( false );
-    bool showInputImg( false );
-
-    LiveViewProcessor processor;
-
-	OPERATION op( CAPTURE_CALI_LEFT );
 	while ( op != EXIT )
 	{
         op = MainMenu();
@@ -77,9 +86,12 @@ int main()
             sprintf_s( outPath, "../cali_data/left/" );
             sprintf_s( filename, "cali_left" );
             inputType = 2; // webcam
-            outputType = 0; // imgs
-            delay = 0; // wait indefinitely, untill any of the above charaters is hit ('c','a','r','Esc')
+            outputType = 2; // none
+            delay = 1;
             webCamId = 1;
+			processor = make_shared<Calibrator>();
+
+			processor->SetNumCam( 1 ); // only 1 camera
 
             showOutputImg = true;
             showInputImg = true;
@@ -130,140 +142,143 @@ int main()
             break;
 
 
-        }
-	}
+        }// switch
+		SetParams();
 
+		// Start the Process
+		processor->Run();
+
+	} // while ( op != EXIT )
+
+	return 0;
+}//main
+
+void SetParams()
+{
 	//////////////////
 	// variables
 	//////////////////
 
-	const int startFrame    = 0;// frame number we want to start at
-	const int endFrame		= 837;
-    FrameProcessor * proc = NULL;
+	const int startFrame = 0;// frame number we want to start at
+	const int endFrame = 837;
+	FrameProcessor * proc = NULL;
 
-    //cout << '\a';
-    //Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
-    //cin.get(); // wait
-    //return 0;
+	//cout << '\a';
+	//Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+	//cin.get(); // wait
+	//return 0;
 
 	/////////////////////////////////////////////////////
 	// Input
 	/////////////////////////////////////////////////////
-	switch (inputType)
+	switch ( inputType )
 	{
-		case 0:
+	case 0:
+	{
+		/////////////////////////
+		// input: images
+		/////////////////////////
+		std::vector<std::string> imgs;
+
+		for ( int i = 0; i < endFrame; i++ )
 		{
-			/////////////////////////
-			// input: images
-			/////////////////////////
-			std::vector<std::string> imgs;
-
-			for (int i = 0; i < endFrame; i++)
-			{
-				char buffer[100];
-				sprintf_s(buffer, "%s%s%03i.jpg", inPath, filename,i);
-
-				std::string name = buffer;
-				imgs.push_back(name);
-			}
-
-			processor.SetInput(imgs);
-		}
-		break;
-
-		case 1:
-		{
-			/////////////////////////
-			// input: video
-			/////////////////////////
 			char buffer[100];
-			sprintf_s(buffer, "%s%s.mp4", inPath, filename);
+			sprintf_s( buffer, "%s%s%03i.jpg", inPath, filename, i );
 
 			std::string name = buffer;
-			/*if (!processor.SetInput(name))
-			{
-				std::cout << "open file error" << std::endl;
-			}*/
+			imgs.push_back( name );
 		}
-		break;
 
-		case 2:
+		processor->SetInput( imgs );
+	}
+	break;
+
+	case 1:
+	{
+		/////////////////////////
+		// input: video
+		/////////////////////////
+		char buffer[100];
+		sprintf_s( buffer, "%s%s.mp4", inPath, filename );
+
+		std::string name = buffer;
+		/*if (!processor->SetInput(name))
 		{
-			/////////////////////////
-			// input: webcam
-			/////////////////////////
-			//processor.SetInput( webCamId ); //webcam
-		}
-		break;
+		std::cout << "open file error" << std::endl;
+		}*/
+	}
+	break;
 
-		default:
-			break;
+	case 2:
+	{
+		/////////////////////////
+		// input: webcam
+		/////////////////////////
+		//processor->SetInput( webCamId ); //webcam
+	}
+	break;
+
+	default:
+		break;
 	} //switch (inputType)
 
-	/////////////////////////////////////////////////////
-	// Output
-	/////////////////////////////////////////////////////
-	switch (outputType)
+	  /////////////////////////////////////////////////////
+	  // Output
+	  /////////////////////////////////////////////////////
+	switch ( outputType )
 	{
-		case 0:
-		{
-			/////////////////////////
-			// output: images
-			/////////////////////////
-			char buffer[100];
-			sprintf_s(buffer, "%s%s", outPath, filename);
+	case 0:
+	{
+		/////////////////////////
+		// output: images
+		/////////////////////////
+		char buffer[100];
+		sprintf_s( buffer, "%s%s", outPath, filename );
 
-			//processor.SetOutput(buffer, ".jpg");
-		}
+		//processor->SetOutput(buffer, ".jpg");
+	}
+	break;
+
+	case 1:
+	{
+		/////////////////////////
+		// output: video
+		/////////////////////////
+		char buffer[100];
+		sprintf_s( buffer, "%s%s.mp4", outPath, filename );
+
+		int codec = CV_FOURCC( 'D', 'I', 'V', 'X' );
+		int fps = 30;
+		//int codec = CV_FOURCC( 'P', 'I', 'M', '1' );
+
+		//processor->SetOutput( buffer, codec, fps );
+	}
+	break;
+
+	// case 2:// no output
+
+	default:
 		break;
-
-		case 1:
-		{
-			/////////////////////////
-			// output: video
-			/////////////////////////
-			char buffer[100];
-			sprintf_s(buffer, "%s%s.mp4", outPath, filename );
-
-			int codec = CV_FOURCC( 'D', 'I', 'V', 'X' );
-			int fps = 30;
-			//int codec = CV_FOURCC( 'P', 'I', 'M', '1' );
-
-			//processor.SetOutput( buffer, codec, fps );
-		}
-		break;
-
-		// case 2:// no output
-
-		default:
-			break;
 	}//switch (outputType)
 
-
-	processor.SetFrameProcessor( proc );
-
-	// Declare a window to display the video
+	 // Declare a window to display the video
 	if ( showOutputImg )
 	{
-		//processor.DisplayOutput( "Test Output" );
+		//processor->DisplayOutput( "Test Output" );
 	}
 
 	// Declare a window to display the input
 	if ( showInputImg )
 	{
-		//processor.DisplayInput( "Input" );
+		//processor->DisplayInput( "Input" );
 	}
 
-	if (!processor.SetFrameNumber(startFrame))
+	/*if ( !processor->SetFrameNumber( startFrame ) )
 	{
 		std::cout << "err";
-		return -1;
+		return ;
 	}
+*/
+	processor->SetDelay( delay );
 
-	processor.SetDelay(delay);
-
-	// Start the Process
-	processor.Run();
-
-	return 0;
 }

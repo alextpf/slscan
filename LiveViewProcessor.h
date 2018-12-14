@@ -15,13 +15,16 @@ using namespace std;
 class FrameProcessor
 {
 public:
-	FrameProcessor() : m_Debug( false )
-	{}
-
 	// processing method
-    virtual void Process( vector<cv::Mat> &input, vector<cv::Mat> &output ) = 0;
-	bool m_Debug;
+	virtual void Process( cv::Mat &input, cv::Mat &output ) = 0;
 }; // class FrameProcessor
+
+class TwoFrameProcessor
+{
+public:
+	// processing method
+	virtual void Process( vector<cv::Mat> &input, vector<cv::Mat> &output ) = 0;
+}; // class TwoFrameProcessor
 
 class LiveViewProcessor
 {
@@ -47,10 +50,16 @@ public:
         int startIndex = 0 );
 
     // set the callback function that will be called for each frame
-    void SetFrameProcessor( void( *frameProcessingCallback ) ( vector<cv::Mat>&, vector<cv::Mat>& ) );
+    void SetOneFrameProcessor( void( *frameProcessingCallback ) ( cv::Mat&, cv::Mat& ) );
 
     // set the instance of the class that implements the FrameProcessor interface
-    void SetFrameProcessor( FrameProcessor* frameProcessorPtr );
+    void SetOneFrameProcessor( FrameProcessor* frameProcessorPtr );
+
+	// set the callback function that will be called for each frame
+	void SetTwoFrameProcessor( void( *frameProcessingCallback ) ( vector<cv::Mat>&, vector<cv::Mat>& ) );
+
+	// set the instance of the class that implements the TwoFrameProcessor interface
+	void SetTwoFrameProcessor( TwoFrameProcessor* frameProcessorPtr );
 
     // stop streaming at this frame number
     void StopAtFrameNo( long frame ) {
@@ -167,7 +176,7 @@ public:
     }
 
     // to grab (and Process) the frames of the sequence
-    void Run();
+    virtual void Run();
 
     // the image will be down-sampled by 1/t in both width and height
     void SetDownSampleRate( unsigned int t )
@@ -191,7 +200,7 @@ public:
 		m_NumCam = n;
 	}
 
-private:
+protected:
 
 	int m_NumCam;
 
@@ -200,11 +209,14 @@ private:
 
     // the callback function to be called
     // for the processing of each frame
-    void( *m_Process ) ( vector<cv::Mat>&, vector<cv::Mat>& );
+    void( *m_OneFrameProcess ) ( cv::Mat&, cv::Mat& );
+
+	void( *m_TwoFrameProcess ) ( vector<cv::Mat>&, vector<cv::Mat>& );
 
     // the pointer to the class implementing
     // the FrameProcessor interface
-    FrameProcessor *m_FrameProcessor;
+    FrameProcessor *m_OneFrameProcessor;
+	TwoFrameProcessor *m_TwoFrameProcessor;
 
     // a bool to determine if the
     // Process callback will be called

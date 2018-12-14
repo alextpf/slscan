@@ -15,8 +15,8 @@ LiveViewProcessor::LiveViewProcessor()
 , m_Stop( false )
 , m_Digits( 0 )
 , m_FrameToStop( -1 )
-, m_Process( 0 )
-, m_FrameProcessor( 0 )
+, m_TwoFrameProcess( 0 )
+, m_TwoFrameProcessor( 0 )
 , m_NumCam( 0 )
 {}
 
@@ -28,7 +28,7 @@ bool LiveViewProcessor::ReadNextFrame( vector<cv::Mat>& frame )
 	{
 		cv::Mat tmp;
 
-		if ( m_Images[i].size() == 0 )
+		if ( m_Images.size() == 0 )
 		{
 			//////////////////////////
 			// it's video or webcam
@@ -166,24 +166,48 @@ bool LiveViewProcessor::SetOutput(
 }
 
 //=======================================================================
-void LiveViewProcessor::SetFrameProcessor( void( *frameProcessingCallback )( vector<cv::Mat>&, vector<cv::Mat>& ) )
+void LiveViewProcessor::SetOneFrameProcessor( void( *frameProcessingCallback )( cv::Mat&, cv::Mat& ) )
 {
     // invalidate frame processor class instance
-    m_FrameProcessor = 0;
+	m_OneFrameProcessor = 0;
     // this is the frame processor function that will be called
-    m_Process = frameProcessingCallback;
+	m_OneFrameProcess = frameProcessingCallback;
     CallProcess();
 }
 
 //=======================================================================
-void LiveViewProcessor::SetFrameProcessor( FrameProcessor* frameProcessorPtr )
+void LiveViewProcessor::SetOneFrameProcessor( FrameProcessor* frameProcessorPtr )
 {
     // invalidate callback function
-    m_Process = 0;
+    m_OneFrameProcess = 0;
     // this is the frame processor instance that will be called
-    m_FrameProcessor = frameProcessorPtr;
+    m_OneFrameProcessor = frameProcessorPtr;
 
-	if( m_FrameProcessor != NULL )
+	if( m_OneFrameProcessor != NULL )
+	{
+		CallProcess();
+	}
+}
+
+//=======================================================================
+void LiveViewProcessor::SetTwoFrameProcessor( void( *frameProcessingCallback )( vector<cv::Mat>&, vector<cv::Mat>& ) )
+{
+	// invalidate frame processor class instance
+	m_TwoFrameProcessor = 0;
+	// this is the frame processor function that will be called
+	m_TwoFrameProcess = frameProcessingCallback;
+	CallProcess();
+}
+
+//=======================================================================
+void LiveViewProcessor::SetTwoFrameProcessor( TwoFrameProcessor* frameProcessorPtr )
+{
+	// invalidate callback function
+	m_TwoFrameProcess = 0;
+	// this is the frame processor instance that will be called
+	m_TwoFrameProcessor = frameProcessorPtr;
+
+	if ( m_TwoFrameProcessor != NULL )
 	{
 		CallProcess();
 	}
@@ -192,7 +216,7 @@ void LiveViewProcessor::SetFrameProcessor( FrameProcessor* frameProcessorPtr )
 //=======================================================================
 cv::Size LiveViewProcessor::GetFrameSize()
 {
-    if( m_Images[0].size() == 0 )
+    if( m_Images.size() == 0 )
     {
         // get size of from the m_Capture device
         int w = static_cast<int>( m_Capture[0].get( CV_CAP_PROP_FRAME_WIDTH ) );
@@ -232,7 +256,7 @@ cv::Size LiveViewProcessor::GetFrameSize()
 //=======================================================================
 long LiveViewProcessor::GetFrameNumber()
 {
-    if( m_Images[0].size() == 0 )
+    if( m_Images.size() == 0 )
     {
         // get info of from the m_Capture device
         long f = static_cast<long>( m_Capture[0].get( CV_CAP_PROP_POS_FRAMES ) );
@@ -354,6 +378,7 @@ bool LiveViewProcessor::SetPositionMS( double pos /*in ms, for vid or cam*/)
             return m_Capture[i].set( CV_CAP_PROP_POS_MSEC, pos );
         }
     }
+	return false;
 }
 
 //=======================================================================
@@ -427,17 +452,17 @@ void LiveViewProcessor::Run()
             }
         }
 
-        // calling the m_Process function or method
+        // calling the m_TwoFrameProcess function or method
         if( m_CallIt )
         {
-            // m_Process the frame
-            if( m_Process )
+            // m_TwoFrameProcess the frame
+            if( m_TwoFrameProcess )
             {
-                m_Process( frame, output );
+                m_TwoFrameProcess( frame, output );
             }
-            else if( m_FrameProcessor )
+            else if( m_TwoFrameProcessor )
             {
-                m_FrameProcessor->Process( frame, output );
+                m_TwoFrameProcessor->Process( frame, output );
             }
         }
         else
@@ -473,7 +498,7 @@ void LiveViewProcessor::Run()
 			//debug
 			//if ( ret == 104 || ret == 72/*H/h, "home"*/ )
 			//{
-			//	m_FrameProcessor->m_Debug = true;
+			//	m_TwoFrameProcessor->m_Debug = true;
 			//}
         }
         else
