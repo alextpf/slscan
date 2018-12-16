@@ -1,12 +1,12 @@
 #pragma once
 #include "LiveViewProcessor.h"
 
-class ChessboardFinder :public FrameProcessor
+class ChessboardFinder
 {
 public:
     ChessboardFinder::ChessboardFinder();
 
-	void Process( cv::Mat & input, cv::Mat & output ) override;
+	bool FindBoard( cv::Mat & input, cv::Mat & output );
 
     void SetWidth( const unsigned int w )
     {
@@ -19,6 +19,5 @@ public:
     }
 
 private:
-    unsigned int m_Width;
-    unsigned int m_Height;
+
 };//ChessboardFinder

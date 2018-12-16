@@ -200,6 +200,16 @@ public:
 		m_NumSource = n;
 	}
 
+	void SetFileNameNumDigits( int s )
+	{
+		m_Digits = s;
+	}
+
+	int SetFileNameNumDigits()
+	{
+		return m_Digits;
+	}
+
 protected:
 
 	int m_NumSource;

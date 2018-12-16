@@ -103,7 +103,7 @@ bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
 
     // In case a resource was already
     // associated with the VideoCapture instance
-    int numSource = m_Capture.size();
+	int numSource = static_cast<int>( m_Capture.size() );
 
     for( int i = 0; i < numSource; i++ )
     {
@@ -111,7 +111,7 @@ bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
     }
     m_Capture.clear();
 
-    numSource = m_Images.size();
+	numSource = static_cast<int>( m_Images.size() );
     for( int i = 0; i < numSource; i++ )
     {
         m_Images[i].clear();
