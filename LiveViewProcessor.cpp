@@ -3,8 +3,8 @@
 #include <conio.h> // for getch
 #include <windows.h> // for kbhit
 
-#define FRAME_WIDTH 1280
-#define FRAME_HEIGHT 720
+#define FRAME_WIDTH 1920
+#define FRAME_HEIGHT 1080
 
 //=======================================================================
 LiveViewProcessor::LiveViewProcessor()
@@ -120,12 +120,11 @@ bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
 
 	for ( int i = 0; i < m_NumSource; i++ )
 	{
-        m_Capture.push_back( cv::VideoCapture( cv::CAP_GPHOTO2 ) );
-
+		m_Capture.push_back( cv::VideoCapture() );
+		ok = ok && m_Capture[i].open( id[i] );
+		// note the setting of resolution has to come AFTER we open it!
 		m_Capture[i].set( cv::CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
 		m_Capture[i].set( cv::CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
-
-		ok = ok && m_Capture[i].open( id[i] );
 	}
 
     // Open the video file
