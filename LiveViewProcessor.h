@@ -46,7 +46,7 @@ public:
     bool SetOutput(
         const vector<string>& filename, // filename prefix
         const string& ext, // image file extension
-        int numberOfDigits = 3,   // number of digits
+        int numberOfDigits,   // number of digits
         int startIndex = 0 );
 
     // set the callback function that will be called for each frame
@@ -211,66 +211,12 @@ public:
 		return m_Digits;
 	}
 
+    void SetScaleFactorForShow( const float s )
+    {
+        m_ScaleFactorForShow = s;
+    }
+
 protected:
-
-	int m_NumSource;
-
-    // the OpenCV video m_Capture object
-	vector<cv::VideoCapture> m_Capture;
-
-    // the callback function to be called
-    // for the processing of each frame
-    void( *m_OneFrameProcess ) ( cv::Mat&, cv::Mat& );
-
-	void( *m_TwoFrameProcess ) ( vector<cv::Mat>&, vector<cv::Mat>& );
-
-    // the pointer to the class implementing
-    // the FrameProcessor interface
-    FrameProcessor *m_OneFrameProcessor;
-	TwoFrameProcessor *m_TwoFrameProcessor;
-
-    // a bool to determine if the
-    // Process callback will be called
-    bool m_CallIt;
-
-    // Input display window name
-	vector<string> m_WindowNameInput;
-
-    // Output display window name
-	vector<string> m_WindowNameOutput;
-
-    // delay between each frame processing
-    int m_Delay;
-
-    // whether to down sample the image to save computation power
-    unsigned int m_DownSampleRate;
-
-    // number of frames
-    long m_TotalFrame;
-
-    // stop at this frame number
-    long m_FrameToStop;
-
-    // to stop the processing
-    bool m_Stop;
-
-	// vector of image filename to be used as input
-	vector<vector<string>> m_Images;
-
-	// image vector iterator
-	vector<vector<string>::const_iterator> m_ItImg;
-
-    // output filename
-	vector<string> m_OutputFile;
-
-    // current index for output Images
-    int m_CurrentIndex;
-
-    // number of digits in output image filename
-    int m_Digits;
-
-    // extension of output Images
-    string m_Extension;
 
     // to get the next frame
     bool ReadNextFrame( vector<cv::Mat>& frame );
@@ -278,5 +224,65 @@ protected:
     // to write the output frame
     void WriteNextFrame( vector<cv::Mat>& frame );
 
+    // the callback function to be called
+    // for the processing of each frame
+    void( *m_OneFrameProcess ) ( cv::Mat&, cv::Mat& );
+
+    void( *m_TwoFrameProcess ) ( vector<cv::Mat>&, vector<cv::Mat>& );
+
+	int                         m_NumSource;
+
+    // the OpenCV video m_Capture object
+	vector<cv::VideoCapture>    m_Capture;
+
+    // the pointer to the class implementing
+    // the FrameProcessor interface
+    FrameProcessor *            m_OneFrameProcessor;
+	TwoFrameProcessor *         m_TwoFrameProcessor;
+
+    // a bool to determine if the
+    // Process callback will be called
+    bool                        m_CallIt;
+
+    // Input display window name
+	vector<string>              m_WindowNameInput;
+
+    // Output display window name
+	vector<string>              m_WindowNameOutput;
+
+    // delay between each frame processing
+    int                         m_Delay;
+
+    // whether to down sample the image to save computation power
+    unsigned int                m_DownSampleRate;
+
+    // number of frames
+    long                        m_TotalFrame;
+
+    // stop at this frame number
+    long                        m_FrameToStop;
+
+    // to stop the processing
+    bool                        m_Stop;
+
+	// vector of image filename to be used as input
+	vector<vector<string>>      m_Images;
+
+	// image vector iterator
+	vector<vector<string>::const_iterator> m_ItImg;
+
+    // output filename
+	vector<string>              m_OutputFile;
+
+    // current index for output Images
+    int                         m_CurrentIndex;
+
+    // number of digits in output image filename
+    int                         m_Digits;
+
+    // extension of output Images
+    string                      m_Extension;
+
+    float                       m_ScaleFactorForShow; // scale for showing purpose
 }; // class LiveViewProcessor
 

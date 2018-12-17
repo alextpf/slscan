@@ -59,8 +59,8 @@ private:
 
 	int					m_NumCaliImgs;
 	vector<cv::Point2f> m_Corners;
-	int					m_Width; // number of column
-	int					m_Height; // number of row
+	int					m_Width; // number of column of inner corners
+	int					m_Height; // number of row of inner corners
 	float				m_BlockSize; // physical size of a chessboard block, in mm
 	string				m_FileName;
 	vector<vector<cv::Point2f> >	m_ImagePoints; // chessboard corners in 2D img coord

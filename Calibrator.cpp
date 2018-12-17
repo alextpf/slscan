@@ -47,7 +47,16 @@ void Calibrator::Run()
         {
             for( int i = 0; i < m_NumSource; i++ )
             {
-                cv::imshow( m_WindowNameInput[i], frame[i] );
+                if( m_ScaleFactorForShow != 1.0f )
+                {
+                    cv::Mat tmp;
+                    cv::resize( frame[i], tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
+                    cv::imshow( m_WindowNameInput[i], tmp );
+                }
+                else
+                {
+                    cv::imshow( m_WindowNameInput[i], frame[i] );
+                }
             }
 		}
 
@@ -57,11 +66,20 @@ void Calibrator::Run()
 		output = frame;
 
 		// display output frame
-        if( m_WindowNameOutput.size() > 0 )
+        if( m_WindowNameOutput.size() > 0 && !IsStopped() )
         {
             for( int i = 0; i < m_NumSource; i++ )
             {
-                cv::imshow( m_WindowNameOutput[i], output[i] );
+                if( m_ScaleFactorForShow != 1.0f )
+                {
+                    cv::Mat tmp;
+                    cv::resize( output[i], tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
+                    cv::imshow( m_WindowNameOutput[i], tmp );
+                }
+                else
+                {
+                    cv::imshow( m_WindowNameOutput[i], output[i] );
+                }
             }
 		}
 
@@ -75,7 +93,14 @@ void Calibrator::Run()
 	// after all the images are processed
 	if ( m_DoCali )
 	{
-		Calibrate();
+        // close window
+        for( int i = 0; i < m_NumSource; i++ )
+        {
+            cv::destroyWindow( m_WindowNameOutput[i] );
+        }
+
+        Calibrate();
+        WriteNumCaliImgs();
 	}
 } // Run
 
@@ -122,6 +147,12 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 		}
 		else if ( ret == 27/*ESC*/ )
 		{
+            // close window
+            for( int i = 0; i < m_NumSource; i++ )
+            {
+                cv::destroyWindow( m_WindowNameOutput[i] );
+            }
+
 			if ( m_CaptureAndCali )
 			{
 				Calibrate();
@@ -191,8 +222,9 @@ bool Calibrator::FindChessboard( const cv::Mat& img, const bool writeImg )
 
 	if ( found )
 	{
-		cv::cornerSubPix( img, corners, cv::Size( 11, 11 ), cv::Size( -1, -1 ),
-			cv::TermCriteria( cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 30, 0.1 ) );
+  //      cv::Mat tmp1 = img.clone();
+		//cv::cornerSubPix( tmp1, corners, cv::Size( 11, 11 ), cv::Size( -1, -1 ),
+		//	cv::TermCriteria( cv::TermCriteria::COUNT /*| cv::TermCriteria::EPS*/, 30, 0.1 ) );
 
 		// show the corners on output window
 

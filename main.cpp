@@ -92,13 +92,13 @@ int main()
             case CAPTURE_CALI_LEFT:
 			{
 				// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
-				const bool ok = CaptureAndOrCali(
-					"cali_data/left/",
-					"cali_data/left/",
-					"cali_left",
-					WEBCAM,
-					IMG,
-					LEFT_CAM,
+                const bool ok = CaptureAndOrCali(
+                    "cali_data/left/",
+                    "cali_data/left/",
+                    "cali_left",
+                    WEBCAM,
+                    IMG,
+                    DEFAULT,// LEFT_CAM,
 					"Left Cam" );
 				if ( !ok )
 				{
@@ -235,8 +235,8 @@ void SetParams()
 //=======================================================
 void WriteConfig()
 {
-	int board_width = 11;
-	int board_height = 8;
+	int board_width = 10;
+	int board_height = 7;
 	float block_size = 50.0f; //mm
 
 	cv::FileStorage fs( "config.xml", cv::FileStorage::WRITE );
@@ -286,6 +286,7 @@ bool CaptureAndOrCali(
 	delay = 1; // ms
 	webCamId = id;
 	const bool captureAndCali = false; // capture only, don't cali
+    const int numDigit = 2;
 
 	Calibrator processor;
 
@@ -295,8 +296,9 @@ bool CaptureAndOrCali(
 	processor.SetHeight( h );
 	processor.SetBlockSize( blockSize );
 	processor.SetFileName( filename );
-	processor.SetFileNameNumDigits( 2 );
+	processor.SetFileNameNumDigits( numDigit );
 	processor.SetCaptureAndCali( captureAndCali );
+    processor.SetScaleFactorForShow( 0.5f );
 
 	vector<string> wn;
 	wn.push_back( title );
@@ -361,7 +363,7 @@ bool CaptureAndOrCali(
 		vector<string> s;
 		s.push_back( buffer );
 
-		processor.SetOutput( s, ".jpg" );
+        processor.SetOutput( s, ".jpg", numDigit );
 	}
 	break;
 

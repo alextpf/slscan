@@ -18,6 +18,7 @@ LiveViewProcessor::LiveViewProcessor()
 , m_TwoFrameProcess( 0 )
 , m_TwoFrameProcessor( 0 )
 , m_NumSource( 0 )
+, m_ScaleFactorForShow( 1.0f )
 {}
 
 //=======================================================================
@@ -122,9 +123,14 @@ bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
 	{
 		m_Capture.push_back( cv::VideoCapture() );
 		ok = ok && m_Capture[i].open( id[i] );
+
 		// note the setting of resolution has to come AFTER we open it!
-		m_Capture[i].set( cv::CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
-		m_Capture[i].set( cv::CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
+		ok = ok && m_Capture[i].set( cv::CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
+        ok = ok && m_Capture[i].set( cv::CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
+
+        //debug
+        int w = m_Capture[i].get( cv::CAP_PROP_FRAME_WIDTH );
+        int h = m_Capture[i].get( cv::CAP_PROP_FRAME_HEIGHT );
 	}
 
     // Open the video file
@@ -136,15 +142,24 @@ void LiveViewProcessor::SetInput( const vector<vector<std::string>>& imgs /*sets
 {
     m_TotalFrame = 0;
 
+    // In case a resource was already
+    // associated with the VideoCapture instance
+    int vidSiz = static_cast<int>( m_Capture.size() );
+
+    if( vidSiz > 0 )
+    {
+        for( int i = 0; i < vidSiz; i++ )
+        {
+            m_Capture[i].release();
+        }
+    }
+    m_Capture.clear();
+
     for( int i = 0; i < m_NumSource; i++ )
     {
-        // In case a resource was already
-        // associated with the VideoCapture instance
-        m_Capture[i].release();
-
         // the input will be this vector of m_Images
-        m_Images[i] = imgs[i];
-        m_ItImg[i] = m_Images[i].begin();
+        m_Images.push_back( imgs[i] );
+        m_ItImg.push_back( m_Images[i].begin() );
     }
 }
 
@@ -466,7 +481,16 @@ void LiveViewProcessor::Run()
         {
             if( m_WindowNameInput[i].length() != 0 )
             {
-                cv::imshow( m_WindowNameInput[i], frame[i] );
+                if( m_ScaleFactorForShow != 1.0f )
+                {
+                    cv::Mat tmp;
+                    cv::resize( frame[i], tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
+                    cv::imshow( m_WindowNameInput[i], tmp );
+                }
+                else
+                {
+                    cv::imshow( m_WindowNameInput[i], frame[i] );
+                }
             }
         }
 
@@ -501,7 +525,16 @@ void LiveViewProcessor::Run()
         {
             if( m_WindowNameOutput[i].length() != 0 )
             {
-                cv::imshow( m_WindowNameOutput[i], output[i] );
+                if( m_ScaleFactorForShow != 1.0f )
+                {
+                    cv::Mat tmp;
+                    cv::resize( output[i], tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
+                    cv::imshow( m_WindowNameOutput[i], tmp );
+                }
+                else
+                {
+                    cv::imshow( m_WindowNameOutput[i], output[i] );
+                }
             }
         }
 
