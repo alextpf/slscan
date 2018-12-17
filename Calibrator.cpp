@@ -222,9 +222,10 @@ bool Calibrator::FindChessboard( const cv::Mat& img, const bool writeImg )
 
 	if ( found )
 	{
-  //      cv::Mat tmp1 = img.clone();
-		//cv::cornerSubPix( tmp1, corners, cv::Size( 11, 11 ), cv::Size( -1, -1 ),
-		//	cv::TermCriteria( cv::TermCriteria::COUNT /*| cv::TermCriteria::EPS*/, 30, 0.1 ) );
+        cv::Mat gray;
+        cv::cvtColor( img, gray, cv::COLOR_BGRA2GRAY );
+		cv::cornerSubPix( gray, corners, cv::Size( 11, 11 ), cv::Size( -1, -1 ),
+			cv::TermCriteria( cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 30, 0.1 ) );
 
 		// show the corners on output window
 
