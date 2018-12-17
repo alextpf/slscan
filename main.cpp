@@ -39,8 +39,8 @@ enum SOURCE_TYPE {
 
 enum WEB_CAM_ID {
 	DEFAULT,
-	LEFT,
-	RIGHT
+	LEFT_CAM,
+	RIGHT_CAM
 };
 //======================================
 //fwd declare
@@ -48,12 +48,22 @@ void SetParams();
 OPERATION MainMenu();
 void WriteConfig();
 void ReadConfig();
+bool CaptureAndOrCali(
+	string in,
+	string out,
+	string name,
+	SOURCE_TYPE inType,
+	SOURCE_TYPE outType,
+	WEB_CAM_ID id,
+	string title
+	);
+
 //======================================
 //globals
 char inPath[256];
 char outPath[256];
 char filename[256];
-int webCamId( DEFAULT ); // 0: default (laptop's camera), 1: external connected cam
+WEB_CAM_ID webCamId( DEFAULT ); // 0: default (laptop's camera), 1: external connected cam
 
 SOURCE_TYPE inputType( WEBCAM ); // 0: imgs, 1: video, 2: webcam
 SOURCE_TYPE outputType( IMG ); // 0: imgs, 1: video, 2: webcam
@@ -68,8 +78,6 @@ float blockSize; // physical size of a chessboard block, in mm
 //========================================
 int main()
 {
-
-
 	while ( op != EXIT )
 	{
         op = MainMenu();
@@ -82,121 +90,39 @@ int main()
 			break;
 
             case CAPTURE_CALI_LEFT:
-            {
-                //////////////////////
-                // Read from config
-                //////////////////////
-				ReadConfig();
-
-                // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
-                sprintf_s( inPath, "../cali_data/left/" );
-                sprintf_s( outPath, "../cali_data/left/" );
-                sprintf_s( filename, "cali_left" );
-                inputType = WEBCAM;
-                outputType = IMG;
-
-                delay = 1; // ms
-                webCamId = LEFT; // 0:
-				Calibrator processor;
-
-			    processor.SetNumSource( 1 ); // only 1 camera
-                processor.SetDelay( delay );
-                processor.SetWidth( w );
-                processor.SetHeight( h );
-				processor.SetBlockSize( blockSize );
-				processor.SetFileName( filename );
-				processor.SetFileNameNumDigits( 2 );
-
-                string title = "Left Cam";
-                vector<string> wn;
-                wn.push_back( title );
-                processor.DisplayOutput( wn );
-
-                //====================================
-                switch( inputType )
-                {
-                    case IMG:
-                    {
-                        const int startFrame = 0;// frame number we want to start at
-                        const int endFrame = processor.GetNumCaliImgs();
-
-                        vector<vector<string>> imgs;
-
-                        vector<string> tmp;
-
-                        for( int i = 0; i < endFrame; i++ )
-                        {
-                            char buffer[100];
-                            sprintf_s( buffer, "%s%s%02i.jpg", inPath, filename, i );
-
-                            string name = buffer;
-                            tmp.push_back( name );
-                        }
-                        imgs.push_back( tmp );
-
-                        processor.SetInput( imgs );
-                    } // case IMG
-                    break;
-
-                    case WEBCAM:
-                    {
-                        vector<int> id;
-                        id.push_back(webCamId);
-
-                        bool ok = processor.SetInput( id ); //webcam
-                        if( !ok )
-                        {
-                            cout << "Can't open webcam/n";
-                            return -1;
-                        }
-                    }// case WEBCAM
-                    break;
-
-                    default:
-                        break;
-                }//switch inputtype
-
-				switch ( outputType )
+			{
+				// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+				const bool ok = CaptureAndOrCali(
+					"cali_data/left/",
+					"cali_data/left/",
+					"cali_left",
+					WEBCAM,
+					IMG,
+					LEFT_CAM,
+					"Left Cam" );
+				if ( !ok )
 				{
-					case IMG:
-					{
-						/////////////////////////
-						// output: images
-						/////////////////////////
-						char buffer[100];
-						sprintf_s( buffer, "%s%s", outPath, filename );
-						vector<string> s;
-						s.push_back( buffer );
-
-						processor.SetOutput( s, ".jpg" );
-					}
-					break;
-
-					default:
-						break;
-				}//switch ( outputType )
-
-				// Start the Process
-                processor.Run();
+					return -1;
+				}
             }//case CAPTURE_CALI_LEFT:
             break;
 
         case CAPTURE_CALI_RIGHT:
         {
-            // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
-            sprintf_s( inPath, "../cali_data/right/" );
-            sprintf_s( outPath, "../cali_data/right/" );
-            sprintf_s( filename, "cali_right" );
-            inputType = WEBCAM;
-            outputType = NONE;
-
-            delay = 1;
-            webCamId = RIGHT;
-
-            showOutputImg = true;
-            showInputImg = true;
-
-        }
+			// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+			const bool ok = CaptureAndOrCali(
+				"cali_data/right/",
+				"cali_data/right/",
+				"cali_right",
+				WEBCAM,
+				IMG,
+				RIGHT_CAM,
+				"Right Cam" );
+			if ( !ok )
+			{
+				return -1;
+			}
+		}
         break;
 
         case CAPTURE_CALI_LEFT_RIGHT:
@@ -204,11 +130,37 @@ int main()
         break;
 
         case CALIBRATE_LEFT:
-        {}
+        {
+			const bool ok = CaptureAndOrCali(
+				"cali_data/left/",
+				"cali_data/left/",
+				"cali_left",
+				IMG,
+				IMG,
+				LEFT_CAM,
+				"Left Cam" );
+			if ( !ok )
+			{
+				return -1;
+			}
+		}
         break;
 
         case CALIBRATE_RIGHT:
-        {}
+        {
+			const bool ok = CaptureAndOrCali(
+				"cali_data/right/",
+				"cali_data/right/",
+				"cali_right",
+				IMG,
+				IMG,
+				RIGHT_CAM,
+				"Right Cam" );
+			if ( !ok )
+			{
+				return -1;
+			}
+		}
         break;
 
         case CALIBRATE_LEFT_RIGHT:
@@ -306,4 +258,119 @@ void ReadConfig()
 	fs["board_width"] >> w;
 	fs["board_height"] >> h;
 	fs["block_size"] >> blockSize;
-}
+}//ReadConfig
+
+//=========================
+bool CaptureAndOrCali(
+	string in,
+	string out,
+	string name,
+	SOURCE_TYPE inType,
+	SOURCE_TYPE outType,
+	WEB_CAM_ID id,
+	string title
+)
+{
+	//////////////////////
+	// Read from config
+	//////////////////////
+	ReadConfig();
+
+	// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+	strcpy_s( inPath, in.c_str() );
+	strcpy_s( outPath, out.c_str() );
+	strcpy_s( filename, name.c_str() );
+	inputType = inType;
+	outputType = outType;
+
+	delay = 1; // ms
+	webCamId = id;
+	const bool captureAndCali = false; // capture only, don't cali
+
+	Calibrator processor;
+
+	processor.SetNumSource( 1 ); // only 1 camera
+	processor.SetDelay( delay );
+	processor.SetWidth( w );
+	processor.SetHeight( h );
+	processor.SetBlockSize( blockSize );
+	processor.SetFileName( filename );
+	processor.SetFileNameNumDigits( 2 );
+	processor.SetCaptureAndCali( captureAndCali );
+
+	vector<string> wn;
+	wn.push_back( title );
+	processor.DisplayOutput( wn );
+
+	//====================================
+	switch ( inType )
+	{
+	case IMG:
+	{
+		processor.SetDoCali( true );
+		processor.ReadNumCaliImgs(); // assuming previously we have captured the cali imgs
+
+		const int startFrame = 0;// frame number we want to start at
+		const int endFrame = processor.GetNumCaliImgs();
+
+		vector<vector<string>> imgs;
+
+		vector<string> tmp;
+
+		for ( int i = 0; i < endFrame; i++ )
+		{
+			char buffer[100];
+			sprintf_s( buffer, "%s%s%02i.jpg", inPath, filename, i );
+
+			string name = buffer;
+			tmp.push_back( name );
+		}
+		imgs.push_back( tmp );
+
+		processor.SetInput( imgs );
+	} // case IMG
+	break;
+
+	case WEBCAM:
+	{
+		vector<int> id;
+		id.push_back( webCamId );
+
+		bool ok = processor.SetInput( id ); //webcam
+		if ( !ok )
+		{
+			cout << "Can't open webcam/n";
+			return false;
+		}
+	}// case WEBCAM
+	break;
+
+	default:
+		break;
+	}//switch inputtype
+
+	switch ( outputType )
+	{
+	case IMG:
+	{
+		/////////////////////////
+		// output: images
+		/////////////////////////
+		char buffer[100];
+		sprintf_s( buffer, "%s%s", outPath, filename );
+		vector<string> s;
+		s.push_back( buffer );
+
+		processor.SetOutput( s, ".jpg" );
+	}
+	break;
+
+	default:
+		break;
+	}//switch ( outputType )
+
+	 // Start the Process
+	processor.Run();
+
+	return true;
+}//CaptureAndOrCali

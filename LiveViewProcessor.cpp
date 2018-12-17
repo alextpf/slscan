@@ -3,8 +3,8 @@
 #include <conio.h> // for getch
 #include <windows.h> // for kbhit
 
-#define FRAME_WIDTH 640
-#define FRAME_HEIGHT 360
+#define FRAME_WIDTH 1280
+#define FRAME_HEIGHT 720
 
 //=======================================================================
 LiveViewProcessor::LiveViewProcessor()
@@ -120,10 +120,10 @@ bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
 
 	for ( int i = 0; i < m_NumSource; i++ )
 	{
-        m_Capture.push_back( cv::VideoCapture() );
+        m_Capture.push_back( cv::VideoCapture( cv::CAP_GPHOTO2 ) );
 
-		m_Capture[i].set( CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
-		m_Capture[i].set( CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
+		m_Capture[i].set( cv::CAP_PROP_FRAME_WIDTH, FRAME_WIDTH );
+		m_Capture[i].set( cv::CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT );
 
 		ok = ok && m_Capture[i].open( id[i] );
 	}
@@ -165,7 +165,7 @@ bool LiveViewProcessor::SetOutput(
     // filenames and their common m_Extension
     for( int i = 0; i < m_NumSource; i++ )
     {
-        m_OutputFile[i] = filename[i];
+		m_OutputFile.push_back( filename[i] );
     }
 
     m_Extension = ext;
@@ -232,8 +232,8 @@ cv::Size LiveViewProcessor::GetFrameSize()
     if( m_Images.size() == 0 )
     {
         // get size of from the m_Capture device
-        int w = static_cast<int>( m_Capture[0].get( CV_CAP_PROP_FRAME_WIDTH ) );
-        int h = static_cast<int>( m_Capture[0].get( CV_CAP_PROP_FRAME_HEIGHT ) );
+        int w = static_cast<int>( m_Capture[0].get( cv::CAP_PROP_FRAME_WIDTH ) );
+        int h = static_cast<int>( m_Capture[0].get( cv::CAP_PROP_FRAME_HEIGHT ) );
 
 		if (m_DownSampleRate > 1)
 		{
@@ -272,7 +272,7 @@ long LiveViewProcessor::GetFrameNumber()
     if( m_Images.size() == 0 )
     {
         // get info of from the m_Capture device
-        long f = static_cast<long>( m_Capture[0].get( CV_CAP_PROP_POS_FRAMES ) );
+        long f = static_cast<long>( m_Capture[0].get( cv::CAP_PROP_POS_FRAMES ) );
         return f;
     }
     else
@@ -291,7 +291,7 @@ double LiveViewProcessor::GetPositionMS()
         return 0.0;
     }
 
-    double t = m_Capture[0].get( CV_CAP_PROP_POS_MSEC );
+	double t = m_Capture[0].get( cv::CAP_PROP_POS_MSEC );
     return t;
 }
 
@@ -304,7 +304,7 @@ double LiveViewProcessor::GetFrameRate()
         return 0;
     }
 
-    double r = m_Capture[0].get( CV_CAP_PROP_FPS );
+    double r = m_Capture[0].get( cv::CAP_PROP_FPS );
     return r;
 }
 
@@ -317,7 +317,7 @@ long LiveViewProcessor::GetTotalFrameCount()
         return static_cast<long>( m_Images[0].size() );
     }
 
-    long t = static_cast<long>( m_Capture[0].get( CV_CAP_PROP_FRAME_COUNT ) );
+    long t = static_cast<long>( m_Capture[0].get( cv::CAP_PROP_FRAME_COUNT ) );
     return t;
 }
 
@@ -336,7 +336,7 @@ int LiveViewProcessor::GetCodec( char codec[4] )
         char code[4];
     } returned;
 
-    returned.value = static_cast<int>( m_Capture[0].get( CV_CAP_PROP_FOURCC ) );
+    returned.value = static_cast<int>( m_Capture[0].get( cv::CAP_PROP_FOURCC ) );
 
     codec[0] = returned.code[0];
     codec[1] = returned.code[1];
@@ -369,7 +369,7 @@ bool LiveViewProcessor::SetFrameNumber( long pos )
         else
         {
             // if input is a m_Capture device or video
-            ok = ok && m_Capture[i].set( CV_CAP_PROP_POS_FRAMES, pos );
+            ok = ok && m_Capture[i].set( cv::CAP_PROP_POS_FRAMES, pos );
         }
     }
 
@@ -388,7 +388,7 @@ bool LiveViewProcessor::SetPositionMS( double pos /*in ms, for vid or cam*/)
     {
         for( int i = 0; i < m_NumSource; i++ )
         {
-            return m_Capture[i].set( CV_CAP_PROP_POS_MSEC, pos );
+            return m_Capture[i].set( cv::CAP_PROP_POS_MSEC, pos );
         }
     }
 	return false;
@@ -414,7 +414,7 @@ bool LiveViewProcessor::SetRelativePosition( double pos /*in %*/)
         else
         {
             // if input is a m_Capture device
-            ok = ok && m_Capture[i].set( CV_CAP_PROP_POS_AVI_RATIO, pos );
+            ok = ok && m_Capture[i].set( cv::CAP_PROP_POS_AVI_RATIO, pos );
         }
     }
 

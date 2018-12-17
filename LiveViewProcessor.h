@@ -95,7 +95,8 @@ public:
         for( int i = 0; i < m_NumSource; i++ )
         {
             m_WindowNameOutput.push_back( wn[i] );
-            cv::namedWindow( m_WindowNameOutput[i] );
+			cv::namedWindow( m_WindowNameOutput[i] );
+			//cv::resizeWindow( m_WindowNameOutput[i], 1280, 720 );
         }
     }
 
