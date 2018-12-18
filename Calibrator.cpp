@@ -1,3 +1,4 @@
+#include <windows.h> // WinApi header
 #include <opencv2/opencv.hpp>
 #include "Calibrator.h"
 
@@ -33,11 +34,13 @@ void Calibrator::Run()
     }
 
 	m_Stop = false;
+	bool ok( true );
 
 	while ( !IsStopped() )
 	{
 		// read next frame if any
-		if ( !ReadNextFrame( frame ) )
+		ok = ok && ReadNextFrame( frame );
+		if ( !ok )
 		{
 			break;
 		}
@@ -91,14 +94,14 @@ void Calibrator::Run()
 	} // while ( !IsStopped() )
 
 	// after all the images are processed
-	if ( m_DoCali )
+	// close window
+	for ( int i = 0; i < m_NumSource; i++ )
 	{
-        // close window
-        for( int i = 0; i < m_NumSource; i++ )
-        {
-            cv::destroyWindow( m_WindowNameOutput[i] );
-        }
+		cv::destroyWindow( m_WindowNameOutput[i] );
+	}
 
+	if ( ok && m_DoCali )
+	{
         Calibrate();
         WriteNumCaliImgs();
 	}
@@ -119,11 +122,18 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 			cout << "can't find chessboard/n";
 			return;
 		}
+
+		if ( m_ItImg[0] == m_Images[0].end() )
+		{
+			StopIt();
+		}
 	}
 	else
 	{
 		if ( ret == 67/*'C'*/ || ret == 99 /*'c'*/ )
 		{
+			Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+
 			// capture, and find chessboard corners
 			cv::Mat& in = frame[0];
 			cv::Mat& out = output[0];
@@ -172,7 +182,8 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 //===============================================
 void Calibrator::WriteCaliResults()
 {
-	cv::FileStorage fs( "CaliResult.xml", cv::FileStorage::WRITE );
+	string s = m_Path + "CaliResult.xml";
+	cv::FileStorage fs( s, cv::FileStorage::WRITE );
 
 	fs << "ImageWidth" << m_ImgSiz.width << "ImageHeight" << m_ImgSiz.height
 		<< "IntrinsicMatrix" << m_IntrinsicMat
@@ -199,7 +210,8 @@ void Calibrator::ReadCaliResults()
 //===============================================
 void Calibrator::WriteNumCaliImgs()
 {
-	cv::FileStorage fs( "NumCaliImgs.xml", cv::FileStorage::WRITE );
+	string s = m_Path + "NumCaliImgs.xml";
+	cv::FileStorage fs( s, cv::FileStorage::WRITE );
 	fs << "NumCaliImgs" << m_NumCaliImgs;
 	fs.release();
 }//WriteNumCaliImgs
@@ -207,7 +219,8 @@ void Calibrator::WriteNumCaliImgs()
 //===============================================
 void Calibrator::ReadNumCaliImgs()
 {
-	cv::FileStorage fs( "NumCaliImgs.xml", cv::FileStorage::READ );
+	string s = m_Path + "NumCaliImgs.xml";
+	cv::FileStorage fs( s, cv::FileStorage::READ );
 	fs["NumCaliImgs"] >> m_NumCaliImgs;
 	fs.release();
 }//ReadNumCaliImgs
@@ -256,6 +269,8 @@ bool Calibrator::FindChessboard( const cv::Mat& img, const bool writeImg )
 
 			if ( ans == 65/*'A'*/ || ans == 97/*'a'*/ )
 			{
+				Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+
 				// we take it, now store the parameters and image
 
 				// cache image points
@@ -266,14 +281,19 @@ bool Calibrator::FindChessboard( const cv::Mat& img, const bool writeImg )
 					WriteCaliImg( img );
 				}
 
+				WriteCaliWithCirclesImg( tmp );
+
 				m_NumCaliImgs++;
 
 				needAnswer = false;
 			}
 			else if ( ans == 82/*'R'*/ || ans == 114/*'r'*/ )
 			{
+				Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+
 				needAnswer = false;
 			}
+
 		}//while ( needAnswer )
 	}//if ( found )
 
@@ -285,19 +305,23 @@ void Calibrator::Calibrate()
 	// use all the captured imgs for calibration
 
 	// create object points
-	vector<cv::Point3f> objPt;
+	vector<vector<cv::Point3f>> objPt;
 	const int boardSize = m_Width * m_Height;
 
 	for ( int i = 0; i < m_NumCaliImgs; i++ )
 	{
+		vector<cv::Point3f> tmpPt;
+
 		for ( int j = 0; j < boardSize; j++ )
 		{
 			cv::Point3f p(
 				static_cast<float> ( j / m_Width ),
 				static_cast<float> ( j % m_Width ), 0.0f );
 
-			objPt.push_back( p );
+			tmpPt.push_back( p );
 		}
+
+		objPt.push_back( tmpPt );
 	}
 
 	// calibrate the camera
@@ -324,7 +348,7 @@ void Calibrator::Calibrate()
 	{
 		// read imgs
 		std::stringstream ss;
-		ss << "../cali_data/left/" << m_FileName << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+		ss << m_Path << m_FileName << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
 		cv::Mat orig = cv::imread( ss.str() );
 		cv::Mat undistort;
 
@@ -332,16 +356,26 @@ void Calibrator::Calibrate()
 			cv::BORDER_CONSTANT, cv::Scalar() );
 
 		// save the undistorted imgs
-		ss.seekg( 0 );
-		ss << m_FileName << "_undist" << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
-		cv::imwrite( ss.str(), undistort );
+		std::stringstream ss1;
+		ss1 << m_Path << m_FileName << "_undist" << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+		cv::imwrite( ss1.str(), undistort );
 	}
 } // Calibrate
 
+//=====================================================
 void Calibrator::WriteCaliImg( const cv::Mat& img )
 {
 	// write imgs
 	std::stringstream ss;
-	ss << "cali_data/left/" << m_FileName << std::setfill( '0' ) << std::setw( m_Digits ) << m_NumCaliImgs << m_Extension;
+	ss << m_Path << m_FileName << std::setfill( '0' ) << std::setw( m_Digits ) << m_NumCaliImgs << m_Extension;
+	cv::imwrite( ss.str(), img );
+}
+
+//=====================================================
+void Calibrator::WriteCaliWithCirclesImg( const cv::Mat& img )
+{
+	// write imgs
+	std::stringstream ss;
+	ss << m_Path << m_FileName << "_pattern" << std::setfill( '0' ) << std::setw( m_Digits ) << m_NumCaliImgs << m_Extension;
 	cv::imwrite( ss.str(), img );
 }

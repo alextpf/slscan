@@ -13,6 +13,11 @@ public:
         return m_NumCaliImgs;
     }
 
+	void SetNumCaliImgs( int s )
+	{
+		m_NumCaliImgs = s;
+	}
+
     void SetWidth( const int w )
     {
 		m_Width = w;
@@ -31,6 +36,11 @@ public:
 	void SetFileName( string s )
 	{
 		m_FileName = s;
+	}
+
+	void SetPath( string s )
+	{
+		m_Path = s;
 	}
 
 	void WriteCaliResults();
@@ -53,6 +63,7 @@ public:
 
 	void Calibrate();
 	void WriteCaliImg( const cv::Mat& img );
+	void WriteCaliWithCirclesImg( const cv::Mat& img );
 
 private:
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
@@ -63,6 +74,7 @@ private:
 	int					m_Height; // number of row of inner corners
 	float				m_BlockSize; // physical size of a chessboard block, in mm
 	string				m_FileName;
+	string				m_Path;
 	vector<vector<cv::Point2f> >	m_ImagePoints; // chessboard corners in 2D img coord
 	vector<vector<cv::Point3f> >	m_ObjectPoints; // chessboard corners in 3D obj coord
 	cv::Mat				m_IntrinsicMat;

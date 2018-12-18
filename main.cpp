@@ -1,7 +1,6 @@
 #include <iostream>
 #include <stdlib.h>
 #include <conio.h>
-#include <windows.h> // WinApi header
 #include <memory>
 #include <fstream>      // std::ifstream
 
@@ -44,7 +43,6 @@ enum WEB_CAM_ID {
 };
 //======================================
 //fwd declare
-void SetParams();
 OPERATION MainMenu();
 void WriteConfig();
 void ReadConfig();
@@ -98,7 +96,7 @@ int main()
                     "cali_left",
                     WEBCAM,
                     IMG,
-                    DEFAULT,// LEFT_CAM,
+                    LEFT_CAM,
 					"Left Cam" );
 				if ( !ok )
 				{
@@ -212,27 +210,6 @@ OPERATION MainMenu()
 } // MainMenu
 
 //=======================================================
-void SetParams()
-{
-	//////////////////
-	// variables
-	//////////////////
-
-	//cout << '\a';
-	//Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
-	//cin.get(); // wait
-	//return 0;
-
-	/*if ( !processor.SetFrameNumber( startFrame ) )
-	{
-		std::cout << "err";
-		return ;
-	}
-*/
-
-}//SetParams
-
-//=======================================================
 void WriteConfig()
 {
 	int board_width = 10;
@@ -299,6 +276,7 @@ bool CaptureAndOrCali(
 	processor.SetFileNameNumDigits( numDigit );
 	processor.SetCaptureAndCali( captureAndCali );
     processor.SetScaleFactorForShow( 0.5f );
+	processor.SetPath( in );
 
 	vector<string> wn;
 	wn.push_back( title );
@@ -314,6 +292,7 @@ bool CaptureAndOrCali(
 
 		const int startFrame = 0;// frame number we want to start at
 		const int endFrame = processor.GetNumCaliImgs();
+		processor.SetNumCaliImgs( 0 ); // reset
 
 		vector<vector<string>> imgs;
 
