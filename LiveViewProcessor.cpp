@@ -3,8 +3,8 @@
 #include <conio.h> // for getch
 #include <windows.h> // for kbhit
 
-#define FRAME_WIDTH 1920
-#define FRAME_HEIGHT 1080
+#define FRAME_WIDTH 640//1920
+#define FRAME_HEIGHT 480//1080
 
 //=======================================================================
 LiveViewProcessor::LiveViewProcessor()
@@ -97,7 +97,7 @@ bool LiveViewProcessor::SetInput( vector<std::string> filename /*of video*/ )
 }
 
 //=======================================================================
-bool LiveViewProcessor::SetInput( vector<int> id /*webcam id*/)
+bool LiveViewProcessor::SetInput( vector<WEB_CAM_ID> id /*webcam id*/)
 {
     m_TotalFrame = 0;
 	bool ok( true );

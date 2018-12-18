@@ -83,6 +83,7 @@ void Calibrator::Run()
                 {
                     cv::imshow( m_WindowNameOutput[i], output[i] );
                 }
+                cv::moveWindow( m_WindowNameOutput[i], i * 800, 0 );
             }
 		}
 
@@ -115,18 +116,18 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 	int ret = cv::waitKey( m_Delay );
 	if ( m_DoCali )
 	{
-		// frame is already the loaded from saved images, so we do cali
-		const bool writeImg = false;
-		if ( !FindChessboard( frame[0], writeImg ) )
-		{
-			cout << "can't find chessboard/n";
-			return;
-		}
+        // frame is already the loaded from saved images, so we do cali
+        const bool writeImg = false;
+        if( !FindChessboard( frame, writeImg ) )
+        {
+            cout << "can't find chessboard/n";
+            return;
+        }
 
-		if ( m_ItImg[0] == m_Images[0].end() )
-		{
-			StopIt();
-		}
+        if( m_ItImg[0] == m_Images[0].end() )
+        {
+            StopIt();
+        }
 	}
 	else
 	{
@@ -134,26 +135,31 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 		{
 			Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
 
-			// capture, and find chessboard corners
-			cv::Mat& in = frame[0];
-			cv::Mat& out = output[0];
+            for( int i = 0; i < m_NumSource; i++ )
+            {
+                // copy to output first
+                output[i] = frame[i].clone();
+            }
 
-			// copy to output first
-			out = in.clone();
-			if ( m_CaptureAndCali )
-			{
-				const bool writeImg = true;
-				if ( !FindChessboard( out, writeImg ) )
-				{
-					cout << "can't find chessboard/n";
-					return;
-				}
-			}//if ( m_CaptureAndCali )
-			else
-			{
-				WriteCaliImg( in );
-				m_NumCaliImgs++;
-			}//if ( m_CaptureAndCali )
+            if( m_CaptureAndCali )
+            {
+                const bool writeImg = true;
+                if( !FindChessboard( frame, writeImg ) )
+                {
+                    cout << "can't find chessboard/n";
+                    return;
+                }
+            }//if ( m_CaptureAndCali )
+            else
+            {
+                for( int i = 0; i < m_NumSource; i++ )
+                {
+                    WriteCaliImg( m_FileName[i], frame[i] );
+                }
+
+            }//if ( m_CaptureAndCali )
+
+            m_NumCaliImgs++;
 		}
 		else if ( ret == 27/*ESC*/ )
 		{
@@ -226,76 +232,78 @@ void Calibrator::ReadNumCaliImgs()
 }//ReadNumCaliImgs
 
 //===============================================
-bool Calibrator::FindChessboard( const cv::Mat& img, const bool writeImg )
+bool Calibrator::FindChessboard( const vector<cv::Mat>& img, const bool writeImg )
 {
 	cv::Size boardSize = cv::Size( m_Width, m_Height );
+    for( int i = 0; i < m_NumSource; i++ )
+    {
+        vector<cv::Point2f> corners;
+        const bool found = cv::findChessboardCorners( img, boardSize, corners );
 
-	vector<cv::Point2f> corners;
-	const bool found = cv::findChessboardCorners( img, boardSize, corners );
+        if( found )
+        {
+            cv::Mat gray;
+            cv::cvtColor( img, gray, cv::COLOR_BGRA2GRAY );
+            cv::cornerSubPix( gray, corners, cv::Size( 11, 11 ), cv::Size( -1, -1 ),
+                cv::TermCriteria( cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 30, 0.1 ) );
 
-	if ( found )
-	{
-        cv::Mat gray;
-        cv::cvtColor( img, gray, cv::COLOR_BGRA2GRAY );
-		cv::cornerSubPix( gray, corners, cv::Size( 11, 11 ), cv::Size( -1, -1 ),
-			cv::TermCriteria( cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 30, 0.1 ) );
+            // show the corners on output window
 
-		// show the corners on output window
+            // show a downsampled img
+            cv::Mat tmp = img.clone();
+            const double scale = 0.5;
+            cv::resize( tmp, tmp, cv::Size(), scale, scale, cv::INTER_LINEAR );
 
-		// show a downsampled img
-		cv::Mat tmp = img.clone();
-		const double scale = 0.5;
-		cv::resize( tmp, tmp, cv::Size(), scale, scale, cv::INTER_LINEAR );
+            //downsampled corners
+            vector<cv::Point2f> tmpCorners;
+            for( int i = 0; i < corners.size(); i++ )
+            {
+                cv::Point2f tmp(
+                    static_cast<float>( corners[i].x * scale ),
+                    static_cast<float>( corners[i].y * scale ) );
 
-		//downsampled corners
-		vector<cv::Point2f> tmpCorners;
-		for ( int i = 0; i < corners.size(); i++ )
-		{
-			cv::Point2f tmp(
-				static_cast<float>( corners[i].x * scale ),
-				static_cast<float>( corners[i].y * scale ) );
+                tmpCorners.push_back( tmp );
+            }
 
-			tmpCorners.push_back( tmp );
-		}
+            // draw it
+            cv::drawChessboardCorners( tmp, boardSize, tmpCorners, found );
+            cv::imshow( m_WindowNameOutput[0], tmp );
 
-		// draw it
-		cv::drawChessboardCorners( tmp, boardSize, tmpCorners, found );
-		cv::imshow( m_WindowNameOutput[0], tmp );
+            bool needAnswer( true );
+            while( needAnswer )
+            {
+                int ans = cv::waitKey( 0 ); // wait indefinitely for an answer: "a" (accept) or "r" (reject)
 
-		bool needAnswer( true );
-		while ( needAnswer )
-		{
-			int ans = cv::waitKey( 0 ); // wait indefinitely for an answer: "a" (accept) or "r" (reject)
+                if( ans == 65/*'A'*/ || ans == 97/*'a'*/ )
+                {
+                    Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
 
-			if ( ans == 65/*'A'*/ || ans == 97/*'a'*/ )
-			{
-				Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+                    // we take it, now store the parameters and image
 
-				// we take it, now store the parameters and image
+                    // cache image points
+                    m_ImagePoints.push_back( corners );
 
-				// cache image points
-				m_ImagePoints.push_back( corners );
+                    if( writeImg )
+                    {
+                        WriteCaliImg( m_FileName[0], img );
+                    }
 
-				if ( writeImg )
-				{
-					WriteCaliImg( img );
-				}
+                    WriteCaliWithCirclesImg( m_FileName[0], tmp );
 
-				WriteCaliWithCirclesImg( tmp );
+                    m_NumCaliImgs++;
 
-				m_NumCaliImgs++;
+                    needAnswer = false;
+                }
+                else if( ans == 82/*'R'*/ || ans == 114/*'r'*/ )
+                {
+                    Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
 
-				needAnswer = false;
-			}
-			else if ( ans == 82/*'R'*/ || ans == 114/*'r'*/ )
-			{
-				Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+                    needAnswer = false;
+                }
 
-				needAnswer = false;
-			}
-
-		}//while ( needAnswer )
-	}//if ( found )
+            }//while ( needAnswer )
+        }//if ( found )
+    }
 
 	return found;
 }//FindChessboard
@@ -348,7 +356,7 @@ void Calibrator::Calibrate()
 	{
 		// read imgs
 		std::stringstream ss;
-		ss << m_Path << m_FileName << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+		ss << m_Path << m_FileName[0] << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
 		cv::Mat orig = cv::imread( ss.str() );
 		cv::Mat undistort;
 
@@ -357,25 +365,23 @@ void Calibrator::Calibrate()
 
 		// save the undistorted imgs
 		std::stringstream ss1;
-		ss1 << m_Path << m_FileName << "_undist" << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+		ss1 << m_Path << m_FileName[0] << "_undist" << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
 		cv::imwrite( ss1.str(), undistort );
 	}
 } // Calibrate
 
 //=====================================================
-void Calibrator::WriteCaliImg( const cv::Mat& img )
+void Calibrator::WriteCaliImg( const string& fileName, const cv::Mat& img )
 {
-	// write imgs
-	std::stringstream ss;
-	ss << m_Path << m_FileName << std::setfill( '0' ) << std::setw( m_Digits ) << m_NumCaliImgs << m_Extension;
-	cv::imwrite( ss.str(), img );
-}
+    std::stringstream ss;
+    ss << m_Path << fileName << std::setfill( '0' ) << std::setw( m_Digits ) << m_NumCaliImgs << m_Extension;
+    cv::imwrite( ss.str(), img );
+}//WriteCaliImg
 
 //=====================================================
-void Calibrator::WriteCaliWithCirclesImg( const cv::Mat& img )
+void Calibrator::WriteCaliWithCirclesImg( const string& fileName, const cv::Mat& img )
 {
-	// write imgs
-	std::stringstream ss;
-	ss << m_Path << m_FileName << "_pattern" << std::setfill( '0' ) << std::setw( m_Digits ) << m_NumCaliImgs << m_Extension;
-	cv::imwrite( ss.str(), img );
-}
+    std::stringstream ss;
+    ss << m_Path << fileName << "_pattern" << std::setfill( '0' ) << std::setw( m_Digits ) << m_NumCaliImgs << m_Extension;
+    cv::imwrite( ss.str(), img );
+}//WriteCaliWithCirclesImg

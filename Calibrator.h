@@ -33,7 +33,7 @@ public:
 		m_BlockSize = s;
 	}
 
-	void SetFileName( string s )
+	void SetFileName( vector<string> s )
 	{
 		m_FileName = s;
 	}
@@ -59,11 +59,11 @@ public:
 		m_DoCali = ok;
 	}
 
-	bool FindChessboard( const cv::Mat& img, const bool writeImg );
+	bool FindChessboard( const vector<cv::Mat>& img, const bool writeImg );
 
 	void Calibrate();
-	void WriteCaliImg( const cv::Mat& img );
-	void WriteCaliWithCirclesImg( const cv::Mat& img );
+	void WriteCaliImg( const string& fileName, const cv::Mat& img );
+	void WriteCaliWithCirclesImg( const string& fileName, const cv::Mat& img );
 
 private:
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
@@ -73,10 +73,10 @@ private:
 	int					m_Width; // number of column of inner corners
 	int					m_Height; // number of row of inner corners
 	float				m_BlockSize; // physical size of a chessboard block, in mm
-	string				m_FileName;
+    vector<string>		m_FileName;
 	string				m_Path;
-	vector<vector<cv::Point2f> >	m_ImagePoints; // chessboard corners in 2D img coord
-	vector<vector<cv::Point3f> >	m_ObjectPoints; // chessboard corners in 3D obj coord
+	vector<vector<vector<cv::Point2f>>>	    m_ImagePoints; // chessboard corners in 2D img coord
+	vector<vector<cv::Point3f>>	            m_ObjectPoints; // chessboard corners in 3D obj coord
 	cv::Mat				m_IntrinsicMat;
 	cv::Mat				m_DistCoeff;
 	cv::Size			m_ImgSiz;

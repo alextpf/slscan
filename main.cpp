@@ -19,10 +19,10 @@ using namespace std;
 enum OPERATION {
 	CAPTURE_CALI_LEFT = 1,
 	CAPTURE_CALI_RIGHT,
-	CAPTURE_CALI_LEFT_RIGHT,
+	CAPTURE_CALI_LEFT_AND_RIGHT,
 	CALIBRATE_LEFT,
 	CALIBRATE_RIGHT,
-	CALIBRATE_LEFT_RIGHT,
+	CALIBRATE_LEFT_AND_RIGHT,
 	MANUAL_SCAN,
 	AUTO_SCAN,
 	WRITE_CONFIG,
@@ -36,11 +36,6 @@ enum SOURCE_TYPE {
     NONE
 };
 
-enum WEB_CAM_ID {
-	DEFAULT,
-	LEFT_CAM,
-	RIGHT_CAM
-};
 //======================================
 //fwd declare
 OPERATION MainMenu();
@@ -49,11 +44,11 @@ void ReadConfig();
 bool CaptureAndOrCali(
 	string in,
 	string out,
-	string name,
+    vector<string> name,
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
-	WEB_CAM_ID id,
-	string title
+	vector<LiveViewProcessor::WEB_CAM_ID> webCamId,
+    vector<string> title
 	);
 
 //======================================
@@ -61,7 +56,7 @@ bool CaptureAndOrCali(
 char inPath[256];
 char outPath[256];
 char filename[256];
-WEB_CAM_ID webCamId( DEFAULT ); // 0: default (laptop's camera), 1: external connected cam
+LiveViewProcessor::WEB_CAM_ID webCamId( LiveViewProcessor::DEFAULT_CAM ); // 0: default (laptop's camera), 1: external connected cam
 
 SOURCE_TYPE inputType( WEBCAM ); // 0: imgs, 1: video, 2: webcam
 SOURCE_TYPE outputType( IMG ); // 0: imgs, 1: video, 2: webcam
@@ -90,14 +85,21 @@ int main()
             case CAPTURE_CALI_LEFT:
 			{
 				// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+                vector<LiveViewProcessor::WEB_CAM_ID> ids;
+                ids.push_back( LiveViewProcessor::LEFT_CAM );
+                vector<string> title;
+                title.push_back( "Left Cam" );
+                vector<string> fileName;
+                fileName.push_back( "cali_left" );
+
                 const bool ok = CaptureAndOrCali(
                     "cali_data/left/",
                     "cali_data/left/",
-                    "cali_left",
+                    fileName,
                     WEBCAM,
                     IMG,
-                    LEFT_CAM,
-					"Left Cam" );
+                    ids,
+					title );
 				if ( !ok )
 				{
 					return -1;
@@ -108,14 +110,21 @@ int main()
         case CAPTURE_CALI_RIGHT:
         {
 			// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+            vector<LiveViewProcessor::WEB_CAM_ID> ids;
+            ids.push_back( LiveViewProcessor::RIGHT_CAM );
+            vector<string> title;
+            title.push_back( "Right Cam" );
+            vector<string> fileName;
+            fileName.push_back( "cali_right" );
+
 			const bool ok = CaptureAndOrCali(
 				"cali_data/right/",
 				"cali_data/right/",
-				"cali_right",
+                fileName,
 				WEBCAM,
 				IMG,
-				RIGHT_CAM,
-				"Right Cam" );
+				ids,
+				title );
 			if ( !ok )
 			{
 				return -1;
@@ -123,20 +132,53 @@ int main()
 		}
         break;
 
-        case CAPTURE_CALI_LEFT_RIGHT:
-        {}
+        case CAPTURE_CALI_LEFT_AND_RIGHT:
+        {
+            // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+            vector<LiveViewProcessor::WEB_CAM_ID> ids;
+            ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+            ids.push_back( LiveViewProcessor::LEFT_CAM );
+            //ids.push_back( LiveViewProcessor::RIGHT_CAM );
+
+            vector<string> title;
+            title.push_back( "Left Cam" );
+            title.push_back( "Right Cam" );
+            vector<string> fileName;
+            fileName.push_back( "cali_left" );
+            fileName.push_back( "cali_right" );
+
+            const bool ok = CaptureAndOrCali(
+                "cali_data/leftAndRight/",
+                "cali_data/leftAndRight/",
+                fileName,
+                WEBCAM,
+                IMG,
+                ids,
+                title );
+            if( !ok )
+            {
+                return -1;
+            }
+        }
         break;
 
         case CALIBRATE_LEFT:
         {
+            vector<LiveViewProcessor::WEB_CAM_ID> ids;
+            ids.push_back( LiveViewProcessor::LEFT_CAM );
+            vector<string> title;
+            title.push_back( "Left Cam" );
+            vector<string> fileName;
+            fileName.push_back( "cali_left" );
+
 			const bool ok = CaptureAndOrCali(
 				"cali_data/left/",
 				"cali_data/left/",
-				"cali_left",
+                fileName,
 				IMG,
 				IMG,
-				LEFT_CAM,
-				"Left Cam" );
+				ids,
+				title );
 			if ( !ok )
 			{
 				return -1;
@@ -146,14 +188,21 @@ int main()
 
         case CALIBRATE_RIGHT:
         {
+            vector<LiveViewProcessor::WEB_CAM_ID> ids;
+            ids.push_back( LiveViewProcessor::RIGHT_CAM );
+            vector<string> title;
+            title.push_back( "Right Cam" );
+            vector<string> fileName;
+            fileName.push_back( "cali_right" );
+
 			const bool ok = CaptureAndOrCali(
 				"cali_data/right/",
 				"cali_data/right/",
-				"cali_right",
+                fileName,
 				IMG,
 				IMG,
-				RIGHT_CAM,
-				"Right Cam" );
+				ids,
+				title );
 			if ( !ok )
 			{
 				return -1;
@@ -161,8 +210,34 @@ int main()
 		}
         break;
 
-        case CALIBRATE_LEFT_RIGHT:
-        {}
+        case CALIBRATE_LEFT_AND_RIGHT:
+        {
+            vector<LiveViewProcessor::WEB_CAM_ID> ids;
+            ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+            ids.push_back( LiveViewProcessor::LEFT_CAM );
+            //ids.push_back( LiveViewProcessor::RIGHT_CAM );
+
+            vector<string> title;
+            title.push_back( "Left Cam" );
+            title.push_back( "Right Cam" );
+
+            vector<string> fileName;
+            fileName.push_back( "cali_left" );
+            fileName.push_back( "cali_right" );
+
+            const bool ok = CaptureAndOrCali(
+                "cali_data/leftAndRight/",
+                "cali_data/leftAndRight/",
+                fileName,
+                IMG,
+                IMG,
+                ids,
+                title );
+            if( !ok )
+            {
+                return -1;
+            }
+        }
         break;
 
         case MANUAL_SCAN:
@@ -241,11 +316,11 @@ void ReadConfig()
 bool CaptureAndOrCali(
 	string in,
 	string out,
-	string name,
+    vector<string> name,
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
-	WEB_CAM_ID id,
-	string title
+	vector<LiveViewProcessor::WEB_CAM_ID> webCamId,
+    vector<string> title
 )
 {
 	//////////////////////
@@ -254,33 +329,28 @@ bool CaptureAndOrCali(
 	ReadConfig();
 
 	// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
-	strcpy_s( inPath, in.c_str() );
-	strcpy_s( outPath, out.c_str() );
-	strcpy_s( filename, name.c_str() );
+
 	inputType = inType;
 	outputType = outType;
 
 	delay = 1; // ms
-	webCamId = id;
 	const bool captureAndCali = false; // capture only, don't cali
     const int numDigit = 2;
+    const int numSource = static_cast<int>( webCamId.size() );
 
 	Calibrator processor;
 
-	processor.SetNumSource( 1 ); // only 1 camera
+	processor.SetNumSource( numSource ); // num of camera
 	processor.SetDelay( delay );
 	processor.SetWidth( w );
 	processor.SetHeight( h );
 	processor.SetBlockSize( blockSize );
-	processor.SetFileName( filename );
+	processor.SetFileName( name );
 	processor.SetFileNameNumDigits( numDigit );
 	processor.SetCaptureAndCali( captureAndCali );
     processor.SetScaleFactorForShow( 0.5f );
 	processor.SetPath( in );
-
-	vector<string> wn;
-	wn.push_back( title );
-	processor.DisplayOutput( wn );
+	processor.DisplayOutput( title );
 
 	//====================================
 	switch ( inType )
@@ -297,16 +367,18 @@ bool CaptureAndOrCali(
 		vector<vector<string>> imgs;
 
 		vector<string> tmp;
+        for( int j = 0; j < numSource; j++ )
+        {
+            for( int i = 0; i < endFrame; i++ )
+            {
+                char buffer[100];
+                sprintf_s( buffer, "%s%s%02i.jpg", in.c_str(), name[j].c_str(), i );
 
-		for ( int i = 0; i < endFrame; i++ )
-		{
-			char buffer[100];
-			sprintf_s( buffer, "%s%s%02i.jpg", inPath, filename, i );
-
-			string name = buffer;
-			tmp.push_back( name );
-		}
-		imgs.push_back( tmp );
+                string imgName = buffer;
+                tmp.push_back( imgName );
+            }
+            imgs.push_back( tmp );
+        }
 
 		processor.SetInput( imgs );
 	} // case IMG
@@ -314,10 +386,7 @@ bool CaptureAndOrCali(
 
 	case WEBCAM:
 	{
-		vector<int> id;
-		id.push_back( webCamId );
-
-		bool ok = processor.SetInput( id ); //webcam
+		bool ok = processor.SetInput( webCamId ); //webcam
 		if ( !ok )
 		{
 			cout << "Can't open webcam/n";
@@ -337,10 +406,14 @@ bool CaptureAndOrCali(
 		/////////////////////////
 		// output: images
 		/////////////////////////
-		char buffer[100];
-		sprintf_s( buffer, "%s%s", outPath, filename );
-		vector<string> s;
-		s.push_back( buffer );
+        vector<string> s;
+        for( int i = 0; i < numSource; i++ )
+        {
+            char buffer[100];
+            sprintf_s( buffer, "%s%s", out.c_str(), name[i].c_str() );
+
+            s.push_back( buffer );
+        }
 
         processor.SetOutput( s, ".jpg", numDigit );
 	}

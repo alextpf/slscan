@@ -29,6 +29,12 @@ public:
 class LiveViewProcessor
 {
 public:
+    enum WEB_CAM_ID {
+        DEFAULT_CAM,
+        LEFT_CAM,
+        RIGHT_CAM
+    };
+
     // Constructor setting the default values
     LiveViewProcessor();
 
@@ -36,7 +42,7 @@ public:
     bool SetInput( vector<string> filename /*video names*/ );
 
     // set the camera ID
-    bool SetInput( vector<int> id /*webcam id*/ );
+    bool SetInput( vector<WEB_CAM_ID> id /*webcam id*/ );
 
     // set the vector of input m_Images
     void SetInput( const vector<vector<string>>& imgs /*sets of img sequence*/ );
