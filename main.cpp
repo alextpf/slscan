@@ -136,9 +136,9 @@ int main()
         {
             // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
             vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+            //ids.push_back( LiveViewProcessor::DEFAULT_CAM );
             ids.push_back( LiveViewProcessor::LEFT_CAM );
-            //ids.push_back( LiveViewProcessor::RIGHT_CAM );
+            ids.push_back( LiveViewProcessor::RIGHT_CAM );
 
             vector<string> title;
             title.push_back( "Left Cam" );
@@ -213,9 +213,9 @@ int main()
         case CALIBRATE_LEFT_AND_RIGHT:
         {
             vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+            //ids.push_back( LiveViewProcessor::DEFAULT_CAM );
             ids.push_back( LiveViewProcessor::LEFT_CAM );
-            //ids.push_back( LiveViewProcessor::RIGHT_CAM );
+            ids.push_back( LiveViewProcessor::RIGHT_CAM );
 
             vector<string> title;
             title.push_back( "Left Cam" );
@@ -330,13 +330,11 @@ bool CaptureAndOrCali(
 
 	// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
 
-	inputType = inType;
-	outputType = outType;
-
 	delay = 1; // ms
 	const bool captureAndCali = false; // capture only, don't cali
     const int numDigit = 2;
     const int numSource = static_cast<int>( webCamId.size() );
+	const float scaleFactor = 0.4f;
 
 	Calibrator processor;
 
@@ -348,7 +346,7 @@ bool CaptureAndOrCali(
 	processor.SetFileName( name );
 	processor.SetFileNameNumDigits( numDigit );
 	processor.SetCaptureAndCali( captureAndCali );
-    processor.SetScaleFactorForShow( 0.5f );
+    processor.SetScaleFactorForShow( scaleFactor );
 	processor.SetPath( in );
 	processor.DisplayOutput( title );
 
@@ -366,9 +364,9 @@ bool CaptureAndOrCali(
 
 		vector<vector<string>> imgs;
 
-		vector<string> tmp;
         for( int j = 0; j < numSource; j++ )
         {
+			vector<string> tmp;
             for( int i = 0; i < endFrame; i++ )
             {
                 char buffer[100];

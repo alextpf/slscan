@@ -3,8 +3,8 @@
 #include <conio.h> // for getch
 #include <windows.h> // for kbhit
 
-#define FRAME_WIDTH 640//1920
-#define FRAME_HEIGHT 480//1080
+#define FRAME_WIDTH 1920
+#define FRAME_HEIGHT 1080
 
 //=======================================================================
 LiveViewProcessor::LiveViewProcessor()

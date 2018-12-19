@@ -186,7 +186,7 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 } // CaptureOptions
 
 //===============================================
-void Calibrator::WriteCaliResults()
+void Calibrator::WriteSingleCamCaliResults()
 {
 	string s = m_Path + "CaliResult.xml";
 	cv::FileStorage fs( s, cv::FileStorage::WRITE );
@@ -197,21 +197,34 @@ void Calibrator::WriteCaliResults()
 		<< "NumCaliImgs" << m_NumCaliImgs;
 
 	fs.release();
-}//WriteCaliResults
+}//WriteSingleCamCaliResults
 
 //===============================================
-void Calibrator::ReadCaliResults()
+void Calibrator::ReadSingleCamCaliResults(
+	const string path,
+	cv::Mat& intrinsicMat,
+	cv::Mat& distCoeff )
 {
-	cv::FileStorage fs( "CaliResult.xml", cv::FileStorage::READ );
+	string s = path + "CaliResult.xml";
+	cv::FileStorage fs( s, cv::FileStorage::READ );
 
-	fs["ImageWidth"] >> m_ImgSiz.width;
-	fs["ImageHeight"] >> m_ImgSiz.height;
-	fs["IntrinsicMatrix"] >> m_IntrinsicMat;
-	fs["DistortionCoeffs"] >> m_DistCoeff;
-	fs["NumCaliImgs"] >> m_NumCaliImgs;
+	fs["IntrinsicMatrix"] >> intrinsicMat;
+	fs["DistortionCoeffs"] >> distCoeff;
 
 	fs.release();
-}//ReadCaliResults
+}//ReadSingleCamCaliResults
+
+//===============================================
+void Calibrator::WriteStereoCamCaliResults()
+{
+	string s = m_Path + "StereoCaliResults.xml";
+	cv::FileStorage fs( s, cv::FileStorage::WRITE );
+	fs << "R" << m_R;
+	fs << "T" << m_T;
+	fs << "E" << m_E;
+	fs << "F" << m_F;
+	fs.release();
+}//WriteStereoCamCaliResults
 
 //===============================================
 void Calibrator::WriteNumCaliImgs()
@@ -232,13 +245,20 @@ void Calibrator::ReadNumCaliImgs()
 }//ReadNumCaliImgs
 
 //===============================================
-bool Calibrator::FindChessboard( const vector<cv::Mat>& img, const bool writeImg )
+bool Calibrator::FindChessboard( const vector<cv::Mat>& imgs, const bool writeImg )
 {
 	cv::Size boardSize = cv::Size( m_Width, m_Height );
+
+	vector<vector<cv::Point2f>> tmpCorners; // #source of #corerns in a img
+	vector<cv::Mat> downImg; // down sampled img
+	bool found( true );
+
     for( int i = 0; i < m_NumSource; i++ )
     {
-        vector<cv::Point2f> corners;
-        const bool found = cv::findChessboardCorners( img, boardSize, corners );
+		vector<cv::Point2f> corners;
+		const cv::Mat& img = imgs[i];
+
+        found = found && cv::findChessboardCorners( img, boardSize, corners );
 
         if( found )
         {
@@ -247,63 +267,70 @@ bool Calibrator::FindChessboard( const vector<cv::Mat>& img, const bool writeImg
             cv::cornerSubPix( gray, corners, cv::Size( 11, 11 ), cv::Size( -1, -1 ),
                 cv::TermCriteria( cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 30, 0.1 ) );
 
+			tmpCorners.push_back( corners );
             // show the corners on output window
 
             // show a downsampled img
             cv::Mat tmp = img.clone();
-            const double scale = 0.5;
-            cv::resize( tmp, tmp, cv::Size(), scale, scale, cv::INTER_LINEAR );
+            cv::resize( tmp, tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow, cv::INTER_LINEAR );
 
             //downsampled corners
-            vector<cv::Point2f> tmpCorners;
+            vector<cv::Point2f> downCorners;
             for( int i = 0; i < corners.size(); i++ )
             {
                 cv::Point2f tmp(
-                    static_cast<float>( corners[i].x * scale ),
-                    static_cast<float>( corners[i].y * scale ) );
+                    static_cast<float>( corners[i].x * m_ScaleFactorForShow ),
+                    static_cast<float>( corners[i].y * m_ScaleFactorForShow ) );
 
-                tmpCorners.push_back( tmp );
+				downCorners.push_back( tmp );
             }
 
             // draw it
-            cv::drawChessboardCorners( tmp, boardSize, tmpCorners, found );
-            cv::imshow( m_WindowNameOutput[0], tmp );
+            cv::drawChessboardCorners( tmp, boardSize, downCorners, found );
+            cv::imshow( m_WindowNameOutput[i], tmp );
 
-            bool needAnswer( true );
-            while( needAnswer )
-            {
-                int ans = cv::waitKey( 0 ); // wait indefinitely for an answer: "a" (accept) or "r" (reject)
+			downImg.push_back( tmp );
 
-                if( ans == 65/*'A'*/ || ans == 97/*'a'*/ )
-                {
-                    Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
-
-                    // we take it, now store the parameters and image
-
-                    // cache image points
-                    m_ImagePoints.push_back( corners );
-
-                    if( writeImg )
-                    {
-                        WriteCaliImg( m_FileName[0], img );
-                    }
-
-                    WriteCaliWithCirclesImg( m_FileName[0], tmp );
-
-                    m_NumCaliImgs++;
-
-                    needAnswer = false;
-                }
-                else if( ans == 82/*'R'*/ || ans == 114/*'r'*/ )
-                {
-                    Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
-
-                    needAnswer = false;
-                }
-
-            }//while ( needAnswer )
         }//if ( found )
-    }
+    } // for
+
+	if ( found )
+	{
+		bool needAnswer( true );
+		while ( needAnswer )
+		{
+			int ans = cv::waitKey( 0 ); // wait indefinitely for an answer: "a" (accept) or "r" (reject)
+
+			if ( ans == 65/*'A'*/ || ans == 97/*'a'*/ )
+			{
+				Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+
+				// cache image points
+				m_ImagePoints.push_back( tmpCorners ); // #caliImgs of #source of #corerns in a img
+				m_NumCaliImgs++;
+
+				for ( int i = 0; i < m_NumSource; i++ )
+				{
+					// we take it, now store the parameters and image
+
+					if ( writeImg )
+					{
+						WriteCaliImg( m_FileName[i], imgs[i] );
+					}
+
+					WriteCaliWithCirclesImg( m_FileName[i], downImg[i] );
+				}
+				needAnswer = false;
+			}
+			else if ( ans == 82/*'R'*/ || ans == 114/*'r'*/ )
+			{
+				Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+
+				needAnswer = false;
+			}
+
+		}//while ( needAnswer )
+	} // if ( found )
 
 	return found;
 }//FindChessboard
@@ -332,41 +359,181 @@ void Calibrator::Calibrate()
 		objPt.push_back( tmpPt );
 	}
 
-	// calibrate the camera
-	double err = cv::calibrateCamera(
-		objPt, m_ImagePoints, m_ImgSiz, m_IntrinsicMat,
-		m_DistCoeff, cv::noArray(), cv::noArray(),
-		cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_PRINCIPAL_POINT );
-
-	// SAVE THE INTRINSICS AND DISTORTIONS
-	cout << " *** DONE!\n\nReprojection error is " << err
-		<< "\nStoring caliResult.xml \n\n";
-
-	WriteCaliResults();
-	//
-	// Build the undistort map which we will use for all
-	// subsequent frames.
-	cv::Mat map1, map2;
-	cv::initUndistortRectifyMap( m_IntrinsicMat, m_DistCoeff,
-		cv::Mat(), m_IntrinsicMat, m_ImgSiz,
-		CV_16SC2, map1, map2 );
-
-	// undistort the images and save them
-	for ( int i = 0; i < m_NumCaliImgs; i++ )
+	if ( m_NumSource == 1 )
 	{
-		// read imgs
-		std::stringstream ss;
-		ss << m_Path << m_FileName[0] << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
-		cv::Mat orig = cv::imread( ss.str() );
-		cv::Mat undistort;
+		//reorganize m_ImagePoints:  #caliImgs of #source of #corerns in a img
+		vector<vector<cv::Point2f>> imgPts;
+		int numImgs = static_cast<int>( m_ImagePoints.size() );
 
-		cv::remap( orig, undistort, map1, map2, cv::INTER_LINEAR,
-			cv::BORDER_CONSTANT, cv::Scalar() );
+		for ( int i = 0; i < numImgs; i++ )
+		{
+			imgPts.push_back( m_ImagePoints[i][0] );
+		}
 
-		// save the undistorted imgs
-		std::stringstream ss1;
-		ss1 << m_Path << m_FileName[0] << "_undist" << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
-		cv::imwrite( ss1.str(), undistort );
+		// calibrate the camera
+		double err = cv::calibrateCamera(
+			objPt, imgPts, m_ImgSiz, m_IntrinsicMat,
+			m_DistCoeff, cv::noArray(), cv::noArray(),
+			cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_PRINCIPAL_POINT );
+
+		// SAVE THE INTRINSICS AND DISTORTIONS
+		cout << " *** DONE!\n\nReprojection error is " << err
+			<< "\nStoring caliResult.xml \n\n";
+
+		WriteSingleCamCaliResults();
+		//
+		// Build the undistort map which we will use for all
+		// subsequent frames.
+		cv::Mat map1, map2;
+		cv::initUndistortRectifyMap( m_IntrinsicMat, m_DistCoeff,
+			cv::Mat(), m_IntrinsicMat, m_ImgSiz,
+			CV_16SC2, map1, map2 );
+
+		// undistort the images and save them
+		for ( int i = 0; i < m_NumCaliImgs; i++ )
+		{
+			// read imgs
+			std::stringstream ss;
+			ss << m_Path << m_FileName[0] << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+			cv::Mat orig = cv::imread( ss.str() );
+			cv::Mat undistort;
+
+			cv::remap( orig, undistort, map1, map2, cv::INTER_LINEAR,
+				cv::BORDER_CONSTANT, cv::Scalar() );
+
+			// save the undistorted imgs
+			std::stringstream ss1;
+			ss1 << m_Path << m_FileName[0] << "_undist" << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+			cv::imwrite( ss1.str(), undistort );
+		} // for i
+	}
+	else
+	{
+		//reorganize m_ImagePoints:  #caliImgs of #source of #corerns in a img
+		vector<vector<cv::Point2f> > imgPts[2];
+
+		for ( int i = 0; i < m_NumCaliImgs; i++ )
+		{
+			imgPts[0].push_back( m_ImagePoints[i][0] ); // left
+			imgPts[1].push_back( m_ImagePoints[i][1] ); // right
+		}
+
+		//stereo
+		// read intrinsic matrix and distortion coeff of both cameras from perviously calibrated results
+		string leftPath = "cali_data/left/";
+		string rightPath = "cali_data/right/";
+
+		cv::Mat M1, M2, D1, D2;
+
+		ReadSingleCamCaliResults( leftPath, M1, D1 );
+		ReadSingleCamCaliResults( rightPath, M2, D2 );
+
+		cv::stereoCalibrate(
+			objPt, imgPts[0], imgPts[1], M1, D1, M2, D2, m_ImgSiz, m_R, m_T, m_E, m_F,
+			cv::CALIB_FIX_INTRINSIC,
+			cv::TermCriteria( cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 100,
+				1e-5 ) );
+
+		WriteStereoCamCaliResults();
+
+		// COMPUTE AND DISPLAY RECTIFICATION
+		//
+		const bool showUndistorted( true );
+
+		if ( showUndistorted )
+		{
+			cv::Mat R1, R2, P1, P2, map11, map12, map21, map22;
+
+			// IF BY CALIBRATED (BOUGUET'S METHOD)
+			//
+
+			cv::stereoRectify( M1, D1, M2, D2, m_ImgSiz, m_R, m_T, R1, R2, P1, P2,
+				cv::noArray(), 0 );
+
+			// Precompute maps for cvRemap()
+			initUndistortRectifyMap( M1, D1, R1, P1, m_ImgSiz, CV_16SC2, map11,
+				map12 );
+			initUndistortRectifyMap( M2, D2, R2, P2, m_ImgSiz, CV_16SC2, map21,
+				map22 );
+
+			//=========
+			// RECTIFY THE IMAGES AND FIND DISPARITY MAPS
+			//
+			cv::Mat pair;
+			pair.create( m_ImgSiz.height, m_ImgSiz.width * 2, CV_8UC3 );
+
+			// Setup for finding stereo corrrespondences
+			//
+			cv::Ptr<cv::StereoSGBM> stereo = cv::StereoSGBM::create(
+				-64, 128, 11, 100, 1000, 32, 0, 15, 1000, 16, cv::StereoSGBM::MODE_HH );
+
+			vector<cv::Mat> frame;
+			for ( int j = 0; j < 2; j++ )
+			{
+				frame.push_back( cv::Mat() );
+			}
+
+			//reset img reader
+			m_ItImg.clear();
+
+			for ( int i = 0; i < m_NumSource; i++ )
+			{
+				// the input will be this vector of m_Images
+				m_ItImg.push_back( m_Images[i].begin() );
+			}
+
+			for ( int i = 0; i < m_NumCaliImgs; i++ )
+			{
+				ReadNextFrame( frame );
+
+				cv::Mat img1r, img2r, disp, vdisp;
+
+				cv::Mat gray0, gray1;
+				cv::cvtColor( frame[0], gray0, cv::COLOR_BGRA2GRAY );
+				cv::cvtColor( frame[1], gray1, cv::COLOR_BGRA2GRAY );
+
+				cv::remap( gray0, img1r, map11, map12, cv::INTER_LINEAR );
+				cv::remap( gray1, img2r, map21, map22, cv::INTER_LINEAR );
+
+				// When the stereo camera is oriented vertically,
+				// Hartley method does not transpose the
+				// image, so the epipolar lines in the rectified
+				// images are vertical. Stereo correspondence
+				// function does not support such a case.
+				bool computerDisp = false;
+				if ( computerDisp )
+				{
+					stereo->compute( img1r, img2r, disp ); // warning: heavy lifting!
+
+					cv::normalize( disp, vdisp, 0, 256, cv::NORM_MINMAX, CV_8U );
+					cv::imshow( "disparity", vdisp );
+				}
+
+				cv::Mat part = pair.colRange( 0, m_ImgSiz.width );
+
+				cv::cvtColor( img1r, part, cv::COLOR_GRAY2BGR );
+
+				part = pair.colRange( m_ImgSiz.width, m_ImgSiz.width * 2 );
+
+				cvtColor( img2r, part, cv::COLOR_GRAY2BGR );
+
+				for ( int j = 0; j < m_ImgSiz.height; j += 16 )
+				{
+					cv::line( pair, cv::Point( 0, j ), cv::Point( m_ImgSiz.width * 2, j ),
+						cv::Scalar( 0, 255, 0 ) );
+				}
+
+				cv::Mat downSize;
+				cv::resize( pair, downSize, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
+
+				cv::imshow( "rectified", downSize );
+
+				if ( ( cv::waitKey(0) & 255 ) == 27 )
+				{
+					break;
+				}
+			}//for ( int i = 0; i < m_NumCaliImgs; i++ )
+		}//if ( showUndistorted )
 	}
 } // Calibrate
 
