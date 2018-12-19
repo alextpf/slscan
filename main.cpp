@@ -53,6 +53,7 @@ bool CaptureAndOrCali(
 
 //======================================
 //globals
+Calibrator processor;
 char inPath[256];
 char outPath[256];
 char filename[256];
@@ -241,7 +242,33 @@ int main()
         break;
 
         case MANUAL_SCAN:
-        {}
+        {
+            vector<LiveViewProcessor::WEB_CAM_ID> ids;
+            ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+            ids.push_back( LiveViewProcessor::LEFT_CAM );
+            //ids.push_back( LiveViewProcessor::RIGHT_CAM );
+
+            vector<string> title;
+            title.push_back( "Left Cam" );
+            title.push_back( "Right Cam" );
+
+            vector<string> fileName;
+            fileName.push_back( "scan_left" );
+            fileName.push_back( "scan_right" );
+
+            const bool ok = CaptureAndOrCali(
+                "scan_data/",
+                "scan_data/",
+                fileName,
+                WEBCAM,
+                IMG,
+                ids,
+                title );
+            if( !ok )
+            {
+                return -1;
+            }
+        }
         break;
 
         case AUTO_SCAN:
@@ -290,10 +317,14 @@ void WriteConfig()
 	int board_width = 10;
 	int board_height = 7;
 	float block_size = 50.0f; //mm
+    int projectorWidth = 1280;
+    int projectorHeight = 768;
 
 	cv::FileStorage fs( "config.xml", cv::FileStorage::WRITE );
 	fs << "board_width" << board_width << "board_height" << board_height
-	   << "block_size" << block_size;
+	   << "block_size" << block_size
+       << "projector_width" << projectorWidth
+       << "projector_height" << projectorHeight;
 	fs.release();
 }//WriteConfig
 
@@ -335,8 +366,6 @@ bool CaptureAndOrCali(
     const int numDigit = 2;
     const int numSource = static_cast<int>( webCamId.size() );
 	const float scaleFactor = 0.4f;
-
-	Calibrator processor;
 
 	processor.SetNumSource( numSource ); // num of camera
 	processor.SetDelay( delay );
@@ -422,7 +451,7 @@ bool CaptureAndOrCali(
 	}//switch ( outputType )
 
 	 // Start the Process
-	processor.Run();
+	processor.CaptureAndClibrate();
 
 	return true;
 }//CaptureAndOrCali

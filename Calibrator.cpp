@@ -13,7 +13,7 @@ Calibrator::Calibrator()
 {}
 
 //=======================================================================
-void Calibrator::Run()
+void Calibrator::CaptureAndClibrate()
 {
 	// current frame
 	vector<cv::Mat> frame;
@@ -296,40 +296,58 @@ bool Calibrator::FindChessboard( const vector<cv::Mat>& imgs, const bool writeIm
 
 	if ( found )
 	{
-		bool needAnswer( true );
-		while ( needAnswer )
-		{
-			int ans = cv::waitKey( 0 ); // wait indefinitely for an answer: "a" (accept) or "r" (reject)
+        // cache image points
+        m_ImagePoints.push_back( tmpCorners ); // #caliImgs of #source of #corerns in a img
+        m_NumCaliImgs++;
 
-			if ( ans == 65/*'A'*/ || ans == 97/*'a'*/ )
-			{
-				Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+        for( int i = 0; i < m_NumSource; i++ )
+        {
+            // we take it, now store the parameters and image
 
-				// cache image points
-				m_ImagePoints.push_back( tmpCorners ); // #caliImgs of #source of #corerns in a img
-				m_NumCaliImgs++;
+            if( writeImg )
+            {
+                WriteCaliImg( m_FileName[i], imgs[i] );
+            }
 
-				for ( int i = 0; i < m_NumSource; i++ )
-				{
-					// we take it, now store the parameters and image
+            WriteCaliWithCirclesImg( m_FileName[i], downImg[i] );
+        }
+        //============================================================
+        // User interactive method: (hit 'a' to accept or 'r' to reject)
+        //============================================================
+		//bool needAnswer( true );
+		//while ( needAnswer )
+		//{
+		//	int ans = cv::waitKey( 0 ); // wait indefinitely for an answer: "a" (accept) or "r" (reject)
 
-					if ( writeImg )
-					{
-						WriteCaliImg( m_FileName[i], imgs[i] );
-					}
+		//	if ( ans == 65/*'A'*/ || ans == 97/*'a'*/ )
+		//	{
+		//		Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
 
-					WriteCaliWithCirclesImg( m_FileName[i], downImg[i] );
-				}
-				needAnswer = false;
-			}
-			else if ( ans == 82/*'R'*/ || ans == 114/*'r'*/ )
-			{
-				Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+		//		// cache image points
+		//		m_ImagePoints.push_back( tmpCorners ); // #caliImgs of #source of #corerns in a img
+		//		m_NumCaliImgs++;
 
-				needAnswer = false;
-			}
+		//		for ( int i = 0; i < m_NumSource; i++ )
+		//		{
+		//			// we take it, now store the parameters and image
 
-		}//while ( needAnswer )
+		//			if ( writeImg )
+		//			{
+		//				WriteCaliImg( m_FileName[i], imgs[i] );
+		//			}
+
+		//			WriteCaliWithCirclesImg( m_FileName[i], downImg[i] );
+		//		}
+		//		needAnswer = false;
+		//	}
+		//	else if ( ans == 82/*'R'*/ || ans == 114/*'r'*/ )
+		//	{
+		//		Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
+
+		//		needAnswer = false;
+		//	}
+
+		//}//while ( needAnswer )
 	} // if ( found )
 
 	return found;

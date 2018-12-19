@@ -1,12 +1,15 @@
 #pragma once
 #include "LiveViewProcessor.h"
+#include "GrayCode.h"
 
 class Calibrator : public LiveViewProcessor
 {
 public:
 	Calibrator::Calibrator();//ctor
 
-	void Run() override;
+	void CaptureAndClibrate();
+
+    void Scan();
 
     int GetNumCaliImgs() const
     {
@@ -70,6 +73,16 @@ public:
 	void WriteCaliImg( const string& fileName, const cv::Mat& img );
 	void WriteCaliWithCirclesImg( const string& fileName, const cv::Mat& img );
 
+    void SetProjectorWidth( const int w )
+    {
+        m_GrayCode.SetWidth( w );
+    }
+
+    void SetProjectorHeight( const int h )
+    {
+        m_GrayCode.SetHeight( h );
+    }
+
 private:
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
 
@@ -90,4 +103,5 @@ private:
 	cv::Mat				m_T; // translation between 2 cams
 	cv::Mat				m_E; // essential matrix
 	cv::Mat				m_F; // fundamental matrix
+    GrayCode            m_GrayCode;
 };//Calibrator
