@@ -70,20 +70,22 @@ public:
 	bool FindChessboard( const vector<cv::Mat>& imgs, const bool writeImg );
 
 	void Calibrate();
-	void WriteCaliImg( const string& fileName, const cv::Mat& img );
+	void WriteImg( const string& fileName, const cv::Mat& img );
 	void WriteCaliWithCirclesImg( const string& fileName, const cv::Mat& img );
+	void SetProjectorDimension( const int w, const int h )
+	{
+		m_GrayCode.ComputeNumPatternImgs( w, h );
+	}
 
-    void SetProjectorWidth( const int w )
-    {
-        m_GrayCode.SetWidth( w );
-    }
-
-    void SetProjectorHeight( const int h )
-    {
-        m_GrayCode.SetHeight( h );
-    }
+	void SetProjWinName( const string s )
+	{
+		m_ProjWinName = s;
+	}
 
 private:
+	void DisplayInputFrame( const vector<cv::Mat>& frame );
+	void DisplayOutputFrame( const vector<cv::Mat>& output );
+
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
 
 	int					m_NumCaliImgs;
@@ -104,4 +106,5 @@ private:
 	cv::Mat				m_E; // essential matrix
 	cv::Mat				m_F; // fundamental matrix
     GrayCode            m_GrayCode;
+	string				m_ProjWinName;
 };//Calibrator

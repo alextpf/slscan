@@ -68,10 +68,17 @@ bool showInputImg( false );
 OPERATION op( CAPTURE_CALI_LEFT );
 int w; // cali pattern width
 int h; // cali pattern height
+int projW; // projector width
+int projH; // projector height
 float blockSize; // physical size of a chessboard block, in mm
 //========================================
 int main()
 {
+	//////////////////////
+	// Read from config
+	//////////////////////
+	ReadConfig();
+
 	while ( op != EXIT )
 	{
         op = MainMenu();
@@ -105,6 +112,10 @@ int main()
 				{
 					return -1;
 				}
+
+				// Start the Process
+				processor.CaptureAndClibrate();
+
             }//case CAPTURE_CALI_LEFT:
             break;
 
@@ -130,6 +141,10 @@ int main()
 			{
 				return -1;
 			}
+
+			// Start the Process
+			processor.CaptureAndClibrate();
+
 		}
         break;
 
@@ -160,6 +175,10 @@ int main()
             {
                 return -1;
             }
+
+			// Start the Process
+			processor.CaptureAndClibrate();
+
         }
         break;
 
@@ -184,6 +203,10 @@ int main()
 			{
 				return -1;
 			}
+
+			// Start the Process
+			processor.CaptureAndClibrate();
+
 		}
         break;
 
@@ -208,6 +231,10 @@ int main()
 			{
 				return -1;
 			}
+
+			// Start the Process
+			processor.CaptureAndClibrate();
+
 		}
         break;
 
@@ -238,6 +265,10 @@ int main()
             {
                 return -1;
             }
+
+			// Start the Process
+			processor.CaptureAndClibrate();
+
         }
         break;
 
@@ -256,6 +287,8 @@ int main()
             fileName.push_back( "scan_left" );
             fileName.push_back( "scan_right" );
 
+			processor.SetProjectorDimension( projW, projH );
+			processor.SetProjWinName( "Pattern Window" );
             const bool ok = CaptureAndOrCali(
                 "scan_data/",
                 "scan_data/",
@@ -268,6 +301,10 @@ int main()
             {
                 return -1;
             }
+
+			// Start the Process
+			processor.Scan();
+
         }
         break;
 
@@ -317,7 +354,7 @@ void WriteConfig()
 	int board_width = 10;
 	int board_height = 7;
 	float block_size = 50.0f; //mm
-    int projectorWidth = 1280;
+    int projectorWidth = 1280; // VANKYO Leisure 510
     int projectorHeight = 768;
 
 	cv::FileStorage fs( "config.xml", cv::FileStorage::WRITE );
@@ -341,6 +378,10 @@ void ReadConfig()
 	fs["board_width"] >> w;
 	fs["board_height"] >> h;
 	fs["block_size"] >> blockSize;
+	fs["projector_width"] >> projW;
+	fs["projector_height"] >> projH;
+
+	fs.release();
 }//ReadConfig
 
 //=========================
@@ -354,11 +395,6 @@ bool CaptureAndOrCali(
     vector<string> title
 )
 {
-	//////////////////////
-	// Read from config
-	//////////////////////
-	ReadConfig();
-
 	// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
 
 	delay = 1; // ms
@@ -449,9 +485,6 @@ bool CaptureAndOrCali(
 	default:
 		break;
 	}//switch ( outputType )
-
-	 // Start the Process
-	processor.CaptureAndClibrate();
 
 	return true;
 }//CaptureAndOrCali
