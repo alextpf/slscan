@@ -70,7 +70,11 @@ public:
 	bool FindChessboard( const vector<cv::Mat>& imgs, const bool writeImg );
 
 	void Calibrate();
-	void WriteImg( const string& fileName, const cv::Mat& img );
+	void WriteImg(
+        const string& fileName,
+        const cv::Mat& img,
+        const int idx );
+
 	void WriteCaliWithCirclesImg( const string& fileName, const cv::Mat& img );
 	void SetProjectorDimension( const int w, const int h )
 	{
@@ -83,8 +87,7 @@ public:
 	}
 
 private:
-	void DisplayInputFrame( const vector<cv::Mat>& frame );
-	void DisplayOutputFrame( const vector<cv::Mat>& output );
+    void DisplayFrame( const vector<string>& winName, const vector<cv::Mat>& output );
 
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
 

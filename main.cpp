@@ -289,6 +289,7 @@ int main()
 
 			processor.SetProjectorDimension( projW, projH );
 			processor.SetProjWinName( "Pattern Window" );
+
             const bool ok = CaptureAndOrCali(
                 "scan_data/",
                 "scan_data/",

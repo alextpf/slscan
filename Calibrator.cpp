@@ -45,14 +45,14 @@ void Calibrator::CaptureAndClibrate()
 			break;
 		}
 
-		DisplayInputFrame( frame );
+        DisplayFrame( m_WindowNameInput, frame );
 
 		// check whether capture or start calibration
 		CaptureOptions( frame, output );
 
 		output = frame;
 
-		DisplayOutputFrame( output );
+        DisplayFrame( m_WindowNameOutput, output );
 
 		// check if we should stop
 		if ( m_FrameToStop >= 0 && GetFrameNumber() == m_FrameToStop )
@@ -83,9 +83,11 @@ void Calibrator::Scan()
 	// Setting pattern window on second monitor (the projector's one)
 
 	cv::namedWindow( m_ProjWinName, cv::WINDOW_NORMAL );
-	cv::resizeWindow( m_ProjWinName, m_GrayCode.GetWidth(), m_GrayCode.GetHeight() );
-	cv::moveWindow( m_ProjWinName, m_GrayCode.GetWidth() + 316, -20 );
-	cv::setWindowProperty( m_ProjWinName, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN );
+	//cv::resizeWindow( m_ProjWinName, m_GrayCode.GetWidth(), m_GrayCode.GetHeight() );
+    int mainScrnWidth = 1920;
+    int yOffset = -20; // window top bar height
+	cv::moveWindow( m_ProjWinName, mainScrnWidth, yOffset );
+	//cv::setWindowProperty( m_ProjWinName, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN );
 
 	for ( int i = 0; i < m_NumSource; i++ )
 	{
@@ -95,17 +97,33 @@ void Calibrator::Scan()
 
 	const vector<cv::Mat>& pattern = m_GrayCode.GetPattern();
 
-	int i = 0;
-	while ( i < (int)pattern.size() )
+    int patSiz = static_cast<int>( pattern.size() );
+
+    //for debug; save the patterns
+    const bool debug = false;
+    if( debug )
+    {
+        for( int i = 0; i < patSiz; i++ )
+        {
+            WriteImg( "pattern", pattern[i], i );
+        }
+    }
+    //====================
+
+    for( int i = 0; i < patSiz; i++ )
 	{
 		// show the projector pattern
 		imshow( m_ProjWinName, pattern[i] );
 
 		vector<cv::Mat> frame;
-		for ( int j = 0; j < 2; j++ )
+		for ( int j = 0; j < m_NumSource; j++ )
 		{
 			frame.push_back( cv::Mat() );
 		}
+
+        // pause a bit for the pattern to be shown
+        int pauseMs = 20; // in ms
+        cv::waitKey( pauseMs );
 
 		bool ok = ReadNextFrame( frame );
 		if ( !ok )
@@ -113,14 +131,15 @@ void Calibrator::Scan()
 			break;
 		}
 
-		DisplayInputFrame( frame );
+        DisplayFrame( m_WindowNameOutput, frame );
+
 		cout << "zoom cam 1: " << m_Capture[0].get( cv::CAP_PROP_ZOOM ) << endl
 			 << "zoom cam 2: " << m_Capture[1].get( cv::CAP_PROP_ZOOM ) << endl;
 
 		cout << "focus cam 1: " << m_Capture[0].get( cv::CAP_PROP_FOCUS ) << endl
 			 << "focus cam 2: " << m_Capture[0].get( cv::CAP_PROP_FOCUS ) << endl;
 
-		bool manualAccept = true;
+		bool manualAccept = false;
 		if ( manualAccept )
 		{
 			cout << "Waiting to save image number " << i + 1 << endl << "Press any key to acquire the photo" << endl;
@@ -131,9 +150,9 @@ void Calibrator::Scan()
 			// Pressing enter, it saves the output
 			if ( key == 13 )
 			{
-				for ( int i = 0; i < m_NumSource; i++ )
+				for ( int j = 0; j < m_NumSource; j++ )
 				{
-					WriteImg( m_FileName[i], frame[i] );
+                    WriteImg( m_FileName[j], frame[j], i );
 				}
 			}
 
@@ -146,9 +165,14 @@ void Calibrator::Scan()
 		else
 		{
 			//auto shoot
+            for( int j = 0; j < m_NumSource; j++ )
+            {
+                WriteImg( m_FileName[j], frame[j], i );
+            }
+
 		}//if ( manualAccept )
 
-	} // while ( i < (int)pattern.size() )
+	} // for i
 }//Scan
 
 //=======================================================================
@@ -197,7 +221,7 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
             {
                 for( int i = 0; i < m_NumSource; i++ )
                 {
-                    WriteImg( m_FileName[i], frame[i] );
+                    WriteImg( m_FileName[i], frame[i], m_NumCaliImgs );
                 }
 
             }//if ( m_CaptureAndCali )
@@ -349,7 +373,7 @@ bool Calibrator::FindChessboard( const vector<cv::Mat>& imgs, const bool writeIm
 
             if( writeImg )
             {
-                WriteImg( m_FileName[i], imgs[i] );
+                WriteImg( m_FileName[i], imgs[i], m_NumCaliImgs );
             }
 
             WriteCaliWithCirclesImg( m_FileName[i], downImg[i] );
@@ -376,7 +400,7 @@ bool Calibrator::FindChessboard( const vector<cv::Mat>& imgs, const bool writeIm
 
 		//			if ( writeImg )
 		//			{
-		//				WriteImg( m_FileName[i], imgs[i] );
+		//				WriteImg( m_FileName[i], imgs[i],m_NumCaliImgs );
 		//			}
 
 		//			WriteCaliWithCirclesImg( m_FileName[i], downImg[i] );
@@ -547,7 +571,7 @@ void Calibrator::Calibrate()
 			{
 				ReadNextFrame( frame );
 
-				cv::Mat img1r, img2r, disp, vdisp;
+				cv::Mat img1r, img2r;
 
 				cv::Mat gray0, gray1;
 				cv::cvtColor( frame[0], gray0, cv::COLOR_BGRA2GRAY );
@@ -564,6 +588,7 @@ void Calibrator::Calibrate()
 				bool computerDisp = false;
 				if ( computerDisp )
 				{
+                    cv::Mat disp, vdisp;
 					stereo->compute( img1r, img2r, disp ); // warning: heavy lifting!
 
 					cv::normalize( disp, vdisp, 0, 256, cv::NORM_MINMAX, CV_8U );
@@ -599,10 +624,13 @@ void Calibrator::Calibrate()
 } // Calibrate
 
 //=====================================================
-void Calibrator::WriteImg( const string& fileName, const cv::Mat& img )
+void Calibrator::WriteImg(
+    const string& fileName,
+    const cv::Mat& img,
+    const int idx )
 {
     std::stringstream ss;
-    ss << m_Path << fileName << std::setfill( '0' ) << std::setw( m_Digits ) << m_NumCaliImgs << m_Extension;
+    ss << m_Path << fileName << std::setfill( '0' ) << std::setw( m_Digits ) << idx << m_Extension;
     cv::imwrite( ss.str(), img );
 }//WriteImg
 
@@ -614,31 +642,10 @@ void Calibrator::WriteCaliWithCirclesImg( const string& fileName, const cv::Mat&
     cv::imwrite( ss.str(), img );
 }//WriteCaliWithCirclesImg
 
-void Calibrator::DisplayInputFrame(const vector<cv::Mat>& frame)
-{
-	// display input frame
-	if ( m_WindowNameInput.size() > 0 )
-	{
-		for ( int i = 0; i < m_NumSource; i++ )
-		{
-			if ( m_ScaleFactorForShow != 1.0f )
-			{
-				cv::Mat tmp;
-				cv::resize( frame[i], tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
-				cv::imshow( m_WindowNameInput[i], tmp );
-			}
-			else
-			{
-				cv::imshow( m_WindowNameInput[i], frame[i] );
-			}
-		}
-	}
-}
-
-void  Calibrator::DisplayOutputFrame( const vector<cv::Mat>& output )
+void  Calibrator::DisplayFrame( const vector<string>& winName, const vector<cv::Mat>& output )
 {
 	// display output frame
-	if ( m_WindowNameOutput.size() > 0 && !IsStopped() )
+	if ( winName.size() > 0 && !IsStopped() )
 	{
 		for ( int i = 0; i < m_NumSource; i++ )
 		{
@@ -646,13 +653,13 @@ void  Calibrator::DisplayOutputFrame( const vector<cv::Mat>& output )
 			{
 				cv::Mat tmp;
 				cv::resize( output[i], tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
-				cv::imshow( m_WindowNameOutput[i], tmp );
+				cv::imshow( winName[i], tmp );
 			}
 			else
 			{
-				cv::imshow( m_WindowNameOutput[i], output[i] );
+				cv::imshow( winName[i], output[i] );
 			}
-			cv::moveWindow( m_WindowNameOutput[i], i * 800, 0 );
+			cv::moveWindow( winName[i], i * 800, 0 );
 		}
 	}
-} // DisplayOutputFrame
+} // DisplayFrame
