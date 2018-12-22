@@ -6,8 +6,8 @@
 Calibrator::Calibrator()
 	: LiveViewProcessor()
 	, m_NumCaliImgs(0)
-	, m_Width( 0 )
-	, m_Height( 0 )
+	, m_CalibPatternWidth( 0 )
+	, m_CalibPatternHeight( 0 )
 	, m_CaptureAndCali( false )
 	, m_DoCali( false )
 {}
@@ -314,7 +314,7 @@ void Calibrator::ReadNumCaliImgs()
 //===============================================
 bool Calibrator::FindChessboard( const vector<cv::Mat>& imgs, const bool writeImg )
 {
-	cv::Size boardSize = cv::Size( m_Width, m_Height );
+	cv::Size boardSize = cv::Size( m_CalibPatternWidth, m_CalibPatternHeight );
 
 	vector<vector<cv::Point2f>> tmpCorners; // #source of #corerns in a img
 	vector<cv::Mat> downImg; // down sampled img
@@ -426,7 +426,7 @@ void Calibrator::Calibrate()
 
 	// create object points
 	vector<vector<cv::Point3f>> objPt;
-	const int boardSize = m_Width * m_Height;
+	const int boardSize = m_CalibPatternWidth * m_CalibPatternHeight;
 
 	for ( int i = 0; i < m_NumCaliImgs; i++ )
 	{
@@ -435,8 +435,8 @@ void Calibrator::Calibrate()
 		for ( int j = 0; j < boardSize; j++ )
 		{
 			cv::Point3f p(
-				static_cast<float> ( j / m_Width ),
-				static_cast<float> ( j % m_Width ), 0.0f );
+				static_cast<float> ( j / m_CalibPatternWidth ),
+				static_cast<float> ( j % m_CalibPatternWidth ), 0.0f );
 
 			tmpPt.push_back( p );
 		}

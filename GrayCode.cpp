@@ -6,8 +6,8 @@
 
 //======================================
 GrayCode::GrayCode()
-    : m_Width( 1280 ) // VANKYO Leisure 510
-    , m_Height( 768 )
+    : m_ProjectorWidth( 1280 ) // VANKYO Leisure 510
+    , m_ProjectorHeight( 768 )
     , m_NumColImgs( 0 )
     , m_NumRowImgs( 0 )
     , m_BlackThresh( 40 )
@@ -20,13 +20,13 @@ void GrayCode::GeneratePattern()
 	// allocate
 	for ( int i = 0; i < m_NumPatternImgs; i++ )
 	{
-		cv::Mat tmp( m_Height, m_Width, CV_8U );
+		cv::Mat tmp( m_ProjectorHeight, m_ProjectorWidth, CV_8U );
 		m_Pattern.push_back( tmp );
 	}
 
 	uchar flag = 0;
 
-	for ( int j = 0; j < m_Width; j++ )  // rows loop
+	for ( int j = 0; j < m_ProjectorWidth; j++ )  // rows loop
 	{
 		int rem = 0; // remain
 		int num = j;
@@ -46,7 +46,7 @@ void GrayCode::GeneratePattern()
 				flag = 0;
 			}
 
-			for ( int i = 0; i < m_Height; i++ )  // rows loop
+			for ( int i = 0; i < m_ProjectorHeight; i++ )  // rows loop
 			{
 				uchar pixel_color = (uchar)flag * 255;
 
@@ -71,7 +71,7 @@ void GrayCode::GeneratePattern()
 
 	//====================
 
-	for ( int i = 0; i < m_Height; i++ )  // rows loop
+	for ( int i = 0; i < m_ProjectorHeight; i++ )  // rows loop
 	{
 		int rem = 0;
 		int num = i;
@@ -91,7 +91,7 @@ void GrayCode::GeneratePattern()
 				flag = 0;
 			}
 
-			for ( int j = 0; j < m_Width; j++ )
+			for ( int j = 0; j < m_ProjectorWidth; j++ )
 			{
 
 				uchar pixel_color = (uchar)flag * 255;
@@ -114,8 +114,8 @@ void GrayCode::GeneratePattern()
 	} // for i
 
 	// generate black and white imgs
-	m_WhiteImage = cv::Mat( m_Height, m_Width, CV_8U, cv::Scalar( 255 ) );
-	m_BlackImage = cv::Mat( m_Height, m_Width, CV_8U, cv::Scalar( 0 ) );
+	m_WhiteImage = cv::Mat( m_ProjectorHeight, m_ProjectorWidth, CV_8U, cv::Scalar( 255 ) );
+	m_BlackImage = cv::Mat( m_ProjectorHeight, m_ProjectorWidth, CV_8U, cv::Scalar( 0 ) );
 
 	m_Pattern.push_back( m_WhiteImage );
 	m_Pattern.push_back( m_BlackImage );
@@ -127,8 +127,8 @@ void GrayCode::ComputeNumPatternImgs( const int w, const int h )
 	SetWidth( w );
 	SetHeight( h );
 
-	m_NumColImgs = ceil( log( double( m_Width ) ) / log( 2.0 ) );
-	m_NumRowImgs = ceil( log( double( m_Height ) ) / log( 2.0 ) );
+	m_NumColImgs = ceil( log( double( m_ProjectorWidth ) ) / log( 2.0 ) );
+	m_NumRowImgs = ceil( log( double( m_ProjectorHeight ) ) / log( 2.0 ) );
 
 	m_NumPatternImgs = 2 * m_NumColImgs + 2 * m_NumRowImgs;
 
@@ -175,7 +175,7 @@ void GrayCode::GenerateShadowMask(
 }//GenerateShadowMask
 
 //===========================================================================
-void GrayCode::Decode(
+bool GrayCode::Decode(
     const vector<vector<cv::Mat>>& captured,
     const vector<cv::Mat>& blackImages,
     const vector<cv::Mat>& whiteImages )
@@ -201,13 +201,12 @@ void GrayCode::Decode(
                 //if the pixel is not shadowed, reconstruct
                 if( m_ShadowMask[k].at<uchar>( j, i ) )
                 {
-
                     cv::Point projPixel;
 
                     //for a (x,y) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
-                    bool error = GetProjPixel( captured[k], i, j, projPixel );
+                    bool ok = GetProjPixel( captured[k], i, j, projPixel );
 
-                    if( error )
+                    if( !ok )
                     {
                         continue;
                     }
@@ -217,6 +216,66 @@ void GrayCode::Decode(
             } // for j
         } // for i
     }// for k
+
+    std::vector<cv::Point> cam1Pixs, cam2Pixs;
+
+    m_DisparityMap = cv::Mat( m_ProjectorHeight, m_ProjectorWidth, CV_64F, double( 0 ) );
+
+    /*double number_of_pixels_cam1 = 0;
+    double number_of_pixels_cam2 = 0;*/
+
+    for( int i = 0; i < m_ProjectorWidth; i++ )
+    {
+        for( int j = 0; j < m_ProjectorHeight; j++ )
+        {
+            cam1Pixs = camsPixels[0][i * m_ProjectorHeight + j];
+            cam2Pixs = camsPixels[1][i * m_ProjectorHeight + j];
+
+            const int cam1PixSiz = static_cast<int>( cam1Pixs.size() );
+            const int cam2PixSiz = static_cast<int>( cam2Pixs.size() );
+
+            if( cam1PixSiz == 0 || cam2PixSiz == 0 )
+            {
+                continue;
+            }
+
+            cv::Point p1;
+            cv::Point p2;
+
+            double sump1x = 0.0;
+            double sump2x = 0.0;
+
+            /*number_of_pixels_cam1 += cam1PixSiz;
+            number_of_pixels_cam2 += cam2PixSiz;*/
+
+            for( int c1 = 0; c1 < cam1PixSiz; c1++ )
+            {
+                p1 = cam1Pixs[c1];
+                sump1x += p1.x;
+            }
+
+            for( int c2 = 0; c2 < cam2PixSiz; c2++ )
+            {
+                p2 = cam2Pixs[c2];
+                sump2x += p2.x;
+            }
+
+            sump1x /= static_cast<double>( cam1PixSiz );
+            sump2x /= static_cast<double>( cam2PixSiz );
+
+            for( int c1 = 0; c1 < cam1PixSiz; c1++ )
+            {
+                p1 = cam1Pixs[c1];
+                m_DisparityMap.at<double>( p1.y, p1.x ) = sump2x - sump1x;
+            }
+
+            sump2x = 0.0; // reset
+            sump1x = 0.0;
+        } // for height
+    } // for width
+
+    return true;
+
 }//Decode
 
 //===========================================================================
@@ -226,7 +285,6 @@ bool GrayCode::GetProjPixel(
     int y,
     cv::Point& projPix )
 {
-    bool error = false;
     int xDec, yDec;
 
     std::vector<uchar> grayCol;
@@ -243,7 +301,8 @@ bool GrayCode::GetProjPixel(
         // the normal and its inverse projection image is in a valid range
         if( abs( val1 - val2 ) < m_WhiteThresh )
         {
-            error = true;
+            // TODO: recover method?
+            return false;
         }
 
         // determine if projection pixel is on or off
@@ -269,7 +328,8 @@ bool GrayCode::GetProjPixel(
         // check if the intensity difference between the values of the normal and its inverse projection image is in a valid range
         if( abs( val1 - val2 ) < m_WhiteThresh )
         {
-            error = true;
+            // TODO: recover method?
+            return false;
         }
 
         // determine if projection pixel is on or off
@@ -285,15 +345,15 @@ bool GrayCode::GetProjPixel(
 
     yDec = GrayToDec( grayRow );
 
-    if( ( yDec >= m_Height || xDec >= m_Width ) )
+    if( ( yDec >= m_ProjectorHeight || xDec >= m_ProjectorWidth ) )
     {
-        error = true;
+        return false;
     }
 
     projPix.x = xDec;
     projPix.y = yDec;
 
-    return error;
+    return true;
 
 } // GetProjPixel
 

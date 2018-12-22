@@ -23,12 +23,12 @@ public:
 
     void SetWidth( const int w )
     {
-		m_Width = w;
+		m_CalibPatternWidth = w;
     }
 
     void SetHeight( const int h )
     {
-		m_Height = h;
+		m_CalibPatternHeight = h;
     }
 
 	void SetBlockSize( const float s )
@@ -92,8 +92,8 @@ private:
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
 
 	int					m_NumCaliImgs;
-	int					m_Width; // number of column of inner corners
-	int					m_Height; // number of row of inner corners
+	int					m_CalibPatternWidth; // number of column of inner corners
+	int					m_CalibPatternHeight; // number of row of inner corners
 	float				m_BlockSize; // physical size of a chessboard block, in mm
     vector<string>		m_FileName;
 	string				m_Path;

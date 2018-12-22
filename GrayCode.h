@@ -9,7 +9,7 @@ public:
 
     void GeneratePattern();
 
-    void Decode(
+    bool Decode(
         const vector<vector<cv::Mat> >& captured,
         const vector<cv::Mat>& blackImages,
         const vector<cv::Mat>& whiteImages );
@@ -18,12 +18,12 @@ public:
 
 	int GetWidth()
 	{
-		return m_Width;
+		return m_ProjectorWidth;
 	}
 
 	int GetHeight()
 	{
-		return m_Height;
+		return m_ProjectorHeight;
 	}
 
 	const vector<cv::Mat>& GetPattern()
@@ -59,16 +59,16 @@ private:
 
 	void SetWidth( const int w )
 	{
-		m_Width = w;
+		m_ProjectorWidth = w;
 	}
 
 	void SetHeight( const int h )
 	{
-		m_Height = h;
+		m_ProjectorHeight = h;
 	}
 
-    int					m_Width; // projector resolution
-    int					m_Height; // projector resolution
+    int					m_ProjectorWidth; // projector resolution
+    int					m_ProjectorHeight; // projector resolution
 	int					m_NumColImgs;
 	int					m_NumRowImgs;
 	int					m_NumPatternImgs;
@@ -78,4 +78,5 @@ private:
     int                 m_BlackThresh;
     int                 m_WhiteThresh;
     vector<cv::Mat>     m_ShadowMask;
+    cv::Mat             m_DisparityMap;
 }; // GrayCode
