@@ -1,6 +1,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-//#include <opencv2/structured_light.hpp>
+#include <map> // for multimap, in Decode
+#include <iostream>
 
 #include "GrayCode.h"
 
@@ -12,11 +13,19 @@ GrayCode::GrayCode()
     , m_NumRowImgs( 0 )
     , m_BlackThresh( 40 )
     , m_WhiteThresh( 5 )
+	, m_ImgWidth( 0 )
+	, m_ImgHeight( 0 )
 {}
 
 //======================================
-void GrayCode::GeneratePattern()
+bool GrayCode::GeneratePattern()
 {
+	if ( m_NumPatternImgs <= 0 )
+	{
+		std::cout << "projector dimenssion is not set (check config.xml )/n";
+		return false;
+	}
+
 	// allocate
 	for ( int i = 0; i < m_NumPatternImgs; i++ )
 	{
@@ -26,13 +35,13 @@ void GrayCode::GeneratePattern()
 
 	uchar flag = 0;
 
-	for ( int j = 0; j < m_ProjectorWidth; j++ )  // rows loop
+	for ( int c = 0; c < m_ProjectorWidth; c++ )  // col loop
 	{
 		int rem = 0; // remain
-		int num = j;
-		int prevRem = j % 2;
+		int num = c;
+		int prevRem = c % 2;
 
-		for ( size_t k = 0; k < m_NumColImgs; k++ )  // images loop
+		for ( int k = 0; k < m_NumColImgs; k++ )  // images loop
 		{
 			num = num / 2;
 			rem = num % 2;
@@ -46,11 +55,11 @@ void GrayCode::GeneratePattern()
 				flag = 0;
 			}
 
-			for ( int i = 0; i < m_ProjectorHeight; i++ )  // rows loop
+			for ( int r = 0; r < m_ProjectorHeight; r++ )  // rows loop
 			{
 				uchar pixel_color = (uchar)flag * 255;
 
-				m_Pattern[2 * m_NumColImgs - 2 * k - 2].at<uchar>( i, j ) = pixel_color;
+				m_Pattern[2 * m_NumColImgs - 2 * k - 2].at<uchar>( r, c ) = pixel_color;
 
 				if ( pixel_color > 0 )
 				{
@@ -61,23 +70,23 @@ void GrayCode::GeneratePattern()
 					pixel_color = (uchar)255;
 				}
 
-				m_Pattern[2 * m_NumColImgs - 2 * k - 1].at<uchar>( i, j ) = pixel_color;  // inverse
-			} // for i
+				m_Pattern[2 * m_NumColImgs - 2 * k - 1].at<uchar>( r, c ) = pixel_color;  // inverse
+			} // for r
 
 			prevRem = rem;
 
 		} // for k
-	}//for j
+	}//for c
 
 	//====================
 
-	for ( int i = 0; i < m_ProjectorHeight; i++ )  // rows loop
+	for ( int r = 0; r < m_ProjectorHeight; r++ )  // rows loop
 	{
 		int rem = 0;
-		int num = i;
-		int prevRem = i % 2;
+		int num = r;
+		int prevRem = r % 2;
 
-		for ( int k = 0; k < m_NumRowImgs; k++ )
+		for ( int k = 0; k < m_NumRowImgs; k++ ) // img loop
 		{
 			num = num / 2;
 			rem = num % 2;
@@ -91,11 +100,11 @@ void GrayCode::GeneratePattern()
 				flag = 0;
 			}
 
-			for ( int j = 0; j < m_ProjectorWidth; j++ )
+			for ( int c = 0; c < m_ProjectorWidth; c++ ) // col loop
 			{
 
 				uchar pixel_color = (uchar)flag * 255;
-				m_Pattern[2 * m_NumRowImgs - 2 * k + 2 * m_NumColImgs - 2].at<uchar>( i, j ) = pixel_color;
+				m_Pattern[2 * m_NumRowImgs - 2 * k + 2 * m_NumColImgs - 2].at<uchar>( r, c ) = pixel_color;
 
 				if ( pixel_color > 0 )
 				{
@@ -106,26 +115,28 @@ void GrayCode::GeneratePattern()
 					pixel_color = (uchar)255;
 				}
 
-				m_Pattern[2 * m_NumRowImgs - 2 * k + 2 * m_NumColImgs - 1].at<uchar>( i, j ) = pixel_color;
-			}//for j
+				m_Pattern[2 * m_NumRowImgs - 2 * k + 2 * m_NumColImgs - 1].at<uchar>( r, c ) = pixel_color;
+			}//for c
 
 			prevRem = rem;
 		} // for k
-	} // for i
+	} // for r
 
 	// generate black and white imgs
 	m_WhiteImage = cv::Mat( m_ProjectorHeight, m_ProjectorWidth, CV_8U, cv::Scalar( 255 ) );
 	m_BlackImage = cv::Mat( m_ProjectorHeight, m_ProjectorWidth, CV_8U, cv::Scalar( 0 ) );
-
+/*
 	m_Pattern.push_back( m_WhiteImage );
 	m_Pattern.push_back( m_BlackImage );
+*/
+	return true;
 }// GeneratePattern
 
 //===========================================================================
 void GrayCode::ComputeNumPatternImgs( const int w, const int h )
 {
-	SetWidth( w );
-	SetHeight( h );
+	SetProjectorWidth( w );
+	SetProjectorHeight( h );
 
 	m_NumColImgs = ceil( log( double( m_ProjectorWidth ) ) / log( 2.0 ) );
 	m_NumRowImgs = ceil( log( double( m_ProjectorHeight ) ) / log( 2.0 ) );
@@ -146,30 +157,31 @@ void GrayCode::GenerateShadowMask(
     {
         m_ShadowMask.push_back( cv::Mat() );
     }
-    int camWidth = whiteImg[0].cols;
-    int camHeight = whiteImg[0].rows;
+
+	m_ImgWidth = whiteImg[0].cols;
+	m_ImgHeight = whiteImg[0].rows;
 
     for( int k = 0; k < numSrc; k++ )
     {
-        m_ShadowMask[k] = cv::Mat( camHeight, camWidth, CV_8U );
+        m_ShadowMask[k] = cv::Mat( m_ImgHeight, m_ImgWidth, CV_8U );
 
-        for( int i = 0; i < camWidth; i++ )
+        for( int x = 0; x < m_ImgWidth; x++ ) // col
         {
-            for( int j = 0; j < camHeight; j++ )
+            for( int y = 0; y < m_ImgHeight; y++ ) // row
             {
-                double white = whiteImg[k].at<uchar>( cv::Point( i, j ) );
-                double black = blackImg[k].at<uchar>( cv::Point( i, j ) );
+                double white = whiteImg[k].at<uchar>( cv::Point( x, y ) );
+                double black = blackImg[k].at<uchar>( cv::Point( x, y ) );
 
                 if( abs( white - black ) > m_BlackThresh )
                 {
-                    m_ShadowMask[k].at<uchar>( cv::Point( i, j ) ) = (uchar)1;
+                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)1;
                 }
                 else
                 {
-                    m_ShadowMask[k].at<uchar>( cv::Point( i, j ) ) = (uchar)0;
+                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)0;
                 }
-            }// for j
-        }//for i
+            }// for y
+        }//for x
     }// for k
 
 }//GenerateShadowMask
@@ -184,52 +196,110 @@ bool GrayCode::Decode(
 
     GenerateShadowMask( blackImages, whiteImages );
 
-    int camWidth = blackImages[0].cols;
-    int camHeight = blackImages[0].rows;
+	std::map     < int /*(x * ImgHeight + y) on the captured image */, int /*(x * ProjHeight + y) decoded decimal*/ > leftCam;
+	std::multimap< int /*(x * ProjHeight + y) decoded decimal*/,	   int /*(x * ImgHeight + y) on the captured image */ > rightCam;
 
-    std::vector<std::vector<std::vector<cv::Point> > > camsPixels;
-    camsPixels.resize( numSrc );
-
-    for( int k = 0; k < numSrc; k++ )
+    for( int k = 0; k < numSrc; k++ ) // number of source (2, cameras)
     {
-        camsPixels[k].resize( camWidth * camHeight );
-
-        for( int i = 0; i < camWidth; i++ )
+        for( int x = 0; x < m_ImgWidth; x++ ) // col
         {
-            for( int j = 0; j < camHeight; j++ )
+            for( int y = 0; y < m_ImgHeight; y++ ) // row
             {
                 //if the pixel is not shadowed, reconstruct
-                if( m_ShadowMask[k].at<uchar>( j, i ) )
+                if( m_ShadowMask[k].at<uchar>( y, x ) )
                 {
-                    cv::Point projPixel;
+					cv::Point imgLoc( x, y );
+                    cv::Point decimal; // decoded decimal number corresponding to to a (x,y) on the image
 
                     //for a (x,y) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
-                    bool ok = GetProjPixel( captured[k], i, j, projPixel );
+                    bool ok = GetProjPixel( captured[k], x, y, decimal );
 
                     if( !ok )
                     {
                         continue;
                     }
 
-                    camsPixels[k][projPixel.x * camHeight + projPixel.y].push_back( cv::Point( i, j ) );
+					const int imgLocIdx = XYToIdx( imgLoc, m_ImgHeight );
+					const int decimalIdx = XYToIdx( decimal, m_ProjectorHeight );
+
+					if ( k == 0 )
+					{
+						// left cam
+						leftCam.insert( std::make_pair( imgLocIdx, decimalIdx ) );
+					}
+					else
+					{
+						// right cam
+						rightCam.insert( std::make_pair( decimalIdx, imgLocIdx ) );
+					}// if k == 0
                 }
-            } // for j
-        } // for i
+            } // for y
+        } // for x
     }// for k
 
-    std::vector<cv::Point> cam1Pixs, cam2Pixs;
+    m_DisparityMap = cv::Mat( m_ImgHeight, m_ImgWidth, CV_32F, 0 );
 
-    m_DisparityMap = cv::Mat( m_ProjectorHeight, m_ProjectorWidth, CV_64F, double( 0 ) );
+	std::map      < int, int>::iterator itLeft;
+	std::multimap < int, int>::iterator itRight;
 
-    /*double number_of_pixels_cam1 = 0;
-    double number_of_pixels_cam2 = 0;*/
+	int marker = 0; // running marker which indicate where the pix is on the right img
+	int rightLimit;
 
-    for( int i = 0; i < m_ProjectorWidth; i++ )
+	for ( int r = 0; r < m_ImgHeight; r++ )
+	{
+		for ( int c = 0; c < m_ImgWidth; c++ )
+		{
+			rightLimit = c;
+
+			cv::Point leftPix( r, c );
+			const int leftPixIdx = XYToIdx( leftPix, m_ImgHeight );
+			itLeft = leftCam.find( leftPixIdx );
+
+			if ( itLeft != leftCam.end() )
+			{
+				int dec = itLeft->second;
+				int rightPixIdx;
+				cv::Point winner; // final winner
+
+				int leftMost = m_ImgWidth;
+				bool ok( false );
+
+				for ( itRight = rightCam.equal_range( dec ).first; itRight != rightCam.equal_range( dec ).second; ++itRight )
+				{
+					rightPixIdx = ( *itRight ).second;
+					cv::Point rightPix;
+					IdxToXY( rightPixIdx, rightPix, m_ImgHeight );
+
+					// evaluate the legit of the found pix
+					if ( rightPix.y == r &&
+						 rightPix.x > marker/* "continuity constraint" */ &&
+						 rightPix.x < rightLimit /* "parallell constraint" */ &&
+						 rightPix.x < leftMost )
+					{
+						ok = true;
+						leftMost = rightPix.x;
+					} // if ( rightPix.y == r )
+				}// for
+
+				if ( ok )
+				{
+					m_DisparityMap.at<double>( r, c ) = leftMost - r;
+				}
+			}//if
+		}// for c
+
+		marker = 0; //reset the marker
+	}// for r
+
+	/*
+	std::vector<cv::Point> cam1Pixs, cam2Pixs;
+
+    for( int x = 0; x < m_ProjectorWidth; x++ )
     {
-        for( int j = 0; j < m_ProjectorHeight; j++ )
+        for( int y = 0; y < m_ProjectorHeight; y++ )
         {
-            cam1Pixs = camsPixels[0][i * m_ProjectorHeight + j];
-            cam2Pixs = camsPixels[1][i * m_ProjectorHeight + j];
+			cam1Pixs = camsPixels[0][ XYToIdx( x, y ) ];
+            cam2Pixs = camsPixels[1][ XYToIdx( x, y ) ];
 
             const int cam1PixSiz = static_cast<int>( cam1Pixs.size() );
             const int cam2PixSiz = static_cast<int>( cam2Pixs.size() );
@@ -244,9 +314,6 @@ bool GrayCode::Decode(
 
             double sump1x = 0.0;
             double sump2x = 0.0;
-
-            /*number_of_pixels_cam1 += cam1PixSiz;
-            number_of_pixels_cam2 += cam2PixSiz;*/
 
             for( int c1 = 0; c1 < cam1PixSiz; c1++ )
             {
@@ -273,7 +340,7 @@ bool GrayCode::Decode(
             sump1x = 0.0;
         } // for height
     } // for width
-
+	*/
     return true;
 
 }//Decode
@@ -281,8 +348,8 @@ bool GrayCode::Decode(
 //===========================================================================
 bool GrayCode::GetProjPixel(
     const vector<cv::Mat>& captured,
-    int x,
-    int y,
+    int x, // pixel, on the image
+    int y, // pixel, on the image
     cv::Point& projPix )
 {
     int xDec, yDec;

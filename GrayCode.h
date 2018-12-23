@@ -7,7 +7,7 @@ class GrayCode
 public:
     GrayCode();
 
-    void GeneratePattern();
+    bool GeneratePattern();
 
     bool Decode(
         const vector<vector<cv::Mat> >& captured,
@@ -57,18 +57,31 @@ private:
         const vector<cv::Mat>& blackImg,
         const vector<cv::Mat>& whiteImg );
 
-	void SetWidth( const int w )
+	void SetProjectorWidth( const int w ) // called in ComputeNumPatternImgs
 	{
 		m_ProjectorWidth = w;
 	}
 
-	void SetHeight( const int h )
+	void SetProjectorHeight( const int h ) // called in ComputeNumPatternImgs
 	{
 		m_ProjectorHeight = h;
 	}
 
+	int XYToIdx( const cv::Point& p, const int h )
+	{
+		return p.x * h + p.y;
+	}
+
+	void IdxToXY( const int idx, cv::Point& p, const int h )
+	{
+		p.y = idx % h;
+		p.x = idx / h;
+	}
+
     int					m_ProjectorWidth; // projector resolution
     int					m_ProjectorHeight; // projector resolution
+	int					m_ImgWidth; // being set in GenerateShadowMask
+	int					m_ImgHeight;
 	int					m_NumColImgs;
 	int					m_NumRowImgs;
 	int					m_NumPatternImgs;

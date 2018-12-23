@@ -76,18 +76,101 @@ void Calibrator::CaptureAndClibrate()
 } // CaptureAndClibrate
 
 //=======================================================================
+void Calibrator::Generate3D()
+{
+	if ( !m_GrayCode.GeneratePattern() )
+	{
+		return;
+	}
+
+	// read calibration result of each camera
+	string leftPath = "cali_data/left/";
+	string rightPath = "cali_data/right/";
+	cv::Mat M1, M2, D1, D2;
+
+	ReadSingleCamCaliResults( leftPath, M1, D1 );
+	ReadSingleCamCaliResults( rightPath, M2, D2 );
+
+	// read calibration result of the stereo rig
+	string seteroPath = "cali_data/leftAndRight";
+	cv::Mat R, T, E, F;
+
+	ReadStereoCamCaliResults( seteroPath, R, T, E, F );
+
+	// Stereo Rectify
+	cv::Mat R1, R2, P1, P2, Q;
+	cv::Rect validRoi[2];
+
+	cv::stereoRectify( M1, D1, M2, D2, m_ImgSiz, R, T, R1, R2, P1, P2, Q, 0,
+		-1, m_ImgSiz, &validRoi[0], &validRoi[1] );
+
+	cv::Mat map1x, map1y, map2x, map2y;
+	initUndistortRectifyMap( M1, D1, R1, P1, m_ImgSiz, CV_32FC1, map1x, map1y );
+	initUndistortRectifyMap( M2, D2, R2, P2, m_ImgSiz, CV_32FC1, map2x, map2y );
+
+	//=================
+	// Now process each of the captured pattern
+
+	// current frame
+	vector<cv::Mat> frame;
+
+	// output frame
+	vector<cv::Mat> output;
+
+	for ( int i = 0; i < m_NumSource; i++ )
+	{
+		frame.push_back( cv::Mat() );
+		output.push_back( cv::Mat() );
+	}
+
+	m_Stop = false;
+	bool ok( true );
+
+	while ( !IsStopped() )
+	{
+		// read next frame if any
+		ok = ok && ReadNextFrame( frame );
+		if ( !ok )
+		{
+			break;
+		}
+
+		DisplayFrame( m_WindowNameInput, frame );
+
+		for ( int i = 0; i < m_NumSource; i++ )
+		{
+			cv::remap( frame[i], output[i], map1x, map1y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
+
+			// save the rectified img
+			WriteImg( m_OutputFileName[i], output[i], m_TotalFrame );
+		}
+
+		DisplayFrame( m_WindowNameOutput, output );
+
+		// check if we should stop
+		if ( m_FrameToStop >= 0 && GetFrameNumber() == m_FrameToStop )
+		{
+			StopIt();
+		}
+	} // while ( !IsStopped() )
+
+} // Generate3D
+
+//=======================================================================
 void Calibrator::Scan()
 {
-	m_GrayCode.GeneratePattern();
+	if ( !m_GrayCode.GeneratePattern() )
+	{
+		return;
+	}
 
 	// Setting pattern window on second monitor (the projector's one)
-
 	cv::namedWindow( m_ProjWinName, cv::WINDOW_NORMAL );
-	//cv::resizeWindow( m_ProjWinName, m_GrayCode.GetWidth(), m_GrayCode.GetHeight() );
-    int mainScrnWidth = 1920;
-    int yOffset = -20; // window top bar height
+	cv::resizeWindow( m_ProjWinName, m_GrayCode.GetWidth(), m_GrayCode.GetHeight() );
+	int mainScrnWidth = 1920;
+    int yOffset = -35; // window top bar height
 	cv::moveWindow( m_ProjWinName, mainScrnWidth, yOffset );
-	//cv::setWindowProperty( m_ProjWinName, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN );
+	cv::setWindowProperty( m_ProjWinName, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN );
 
 	for ( int i = 0; i < m_NumSource; i++ )
 	{
@@ -122,37 +205,30 @@ void Calibrator::Scan()
 		}
 
         // pause a bit for the pattern to be shown
-        int pauseMs = 20; // in ms
+        int pauseMs = 500; // in ms
         cv::waitKey( pauseMs );
 
 		bool ok = ReadNextFrame( frame );
 		if ( !ok )
 		{
+			cout << "can't read video/n";
 			break;
 		}
 
         DisplayFrame( m_WindowNameOutput, frame );
-
-		cout << "zoom cam 1: " << m_Capture[0].get( cv::CAP_PROP_ZOOM ) << endl
-			 << "zoom cam 2: " << m_Capture[1].get( cv::CAP_PROP_ZOOM ) << endl;
-
-		cout << "focus cam 1: " << m_Capture[0].get( cv::CAP_PROP_FOCUS ) << endl
-			 << "focus cam 2: " << m_Capture[0].get( cv::CAP_PROP_FOCUS ) << endl;
 
 		bool manualAccept = false;
 		if ( manualAccept )
 		{
 			cout << "Waiting to save image number " << i + 1 << endl << "Press any key to acquire the photo" << endl;
 
-			bool save1 = false;
-			bool save2 = false;
 			int key = cv::waitKey( 0 );
 			// Pressing enter, it saves the output
 			if ( key == 13 )
 			{
 				for ( int j = 0; j < m_NumSource; j++ )
 				{
-                    WriteImg( m_FileName[j], frame[j], i );
+                    WriteImg( m_OutputFileName[j], frame[j], i );
 				}
 			}
 
@@ -167,7 +243,7 @@ void Calibrator::Scan()
 			//auto shoot
             for( int j = 0; j < m_NumSource; j++ )
             {
-                WriteImg( m_FileName[j], frame[j], i );
+                WriteImg( m_OutputFileName[j], frame[j], i );
             }
 
 		}//if ( manualAccept )
@@ -221,7 +297,7 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
             {
                 for( int i = 0; i < m_NumSource; i++ )
                 {
-                    WriteImg( m_FileName[i], frame[i], m_NumCaliImgs );
+                    WriteImg( m_OutputFileName[i], frame[i], m_NumCaliImgs );
                 }
 
             }//if ( m_CaptureAndCali )
@@ -292,6 +368,25 @@ void Calibrator::WriteStereoCamCaliResults()
 	fs << "F" << m_F;
 	fs.release();
 }//WriteStereoCamCaliResults
+
+//===============================================
+void ReadStereoCamCaliResults(
+	const string path,
+	cv::Mat& R,
+	cv::Mat& T,
+	cv::Mat& E,
+	cv::Mat& F )
+{
+	string s = path + "StereoCaliResults.xml";
+	cv::FileStorage fs( s, cv::FileStorage::READ );
+
+	fs["R"] >> R;
+	fs["T"] >> T;
+	fs["E"] >> E;
+	fs["F"] >> F;
+
+	fs.release();
+} // ReadStereoCamCaliResults
 
 //===============================================
 void Calibrator::WriteNumCaliImgs()
@@ -373,48 +468,11 @@ bool Calibrator::FindChessboard( const vector<cv::Mat>& imgs, const bool writeIm
 
             if( writeImg )
             {
-                WriteImg( m_FileName[i], imgs[i], m_NumCaliImgs );
+                WriteImg( m_OutputFileName[i], imgs[i], m_NumCaliImgs );
             }
 
-            WriteCaliWithCirclesImg( m_FileName[i], downImg[i] );
+            WriteCaliWithCirclesImg( m_OutputFileName[i], downImg[i] );
         }
-        //============================================================
-        // User interactive method: (hit 'a' to accept or 'r' to reject)
-        //============================================================
-		//bool needAnswer( true );
-		//while ( needAnswer )
-		//{
-		//	int ans = cv::waitKey( 0 ); // wait indefinitely for an answer: "a" (accept) or "r" (reject)
-
-		//	if ( ans == 65/*'A'*/ || ans == 97/*'a'*/ )
-		//	{
-		//		Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
-
-		//		// cache image points
-		//		m_ImagePoints.push_back( tmpCorners ); // #caliImgs of #source of #corerns in a img
-		//		m_NumCaliImgs++;
-
-		//		for ( int i = 0; i < m_NumSource; i++ )
-		//		{
-		//			// we take it, now store the parameters and image
-
-		//			if ( writeImg )
-		//			{
-		//				WriteImg( m_FileName[i], imgs[i],m_NumCaliImgs );
-		//			}
-
-		//			WriteCaliWithCirclesImg( m_FileName[i], downImg[i] );
-		//		}
-		//		needAnswer = false;
-		//	}
-		//	else if ( ans == 82/*'R'*/ || ans == 114/*'r'*/ )
-		//	{
-		//		Beep( 523, 500 ); // 523 hertz (C5) for 500 milliseconds
-
-		//		needAnswer = false;
-		//	}
-
-		//}//while ( needAnswer )
 	} // if ( found )
 
 	return found;
@@ -479,7 +537,7 @@ void Calibrator::Calibrate()
 		{
 			// read imgs
 			std::stringstream ss;
-			ss << m_Path << m_FileName[0] << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+			ss << m_Path << m_InputFileName[0] << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
 			cv::Mat orig = cv::imread( ss.str() );
 			cv::Mat undistort;
 
@@ -487,9 +545,7 @@ void Calibrator::Calibrate()
 				cv::BORDER_CONSTANT, cv::Scalar() );
 
 			// save the undistorted imgs
-			std::stringstream ss1;
-			ss1 << m_Path << m_FileName[0] << "_undist" << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
-			cv::imwrite( ss1.str(), undistort );
+			WriteImg( m_OutputFileName[0], undistort, i );
 		} // for i
 	}
 	else
@@ -614,6 +670,9 @@ void Calibrator::Calibrate()
 
 				cv::imshow( "rectified", downSize );
 
+				// save the image
+				WriteImg( "rectified", pair, i );
+
 				if ( ( cv::waitKey(0) & 255 ) == 27 )
 				{
 					break;
@@ -659,7 +718,7 @@ void  Calibrator::DisplayFrame( const vector<string>& winName, const vector<cv::
 			{
 				cv::imshow( winName[i], output[i] );
 			}
-			cv::moveWindow( winName[i], i * 800, 0 );
+			cv::moveWindow( winName[i], i * 750, 0 );
 		}
 	}
 } // DisplayFrame

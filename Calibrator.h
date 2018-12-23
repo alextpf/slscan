@@ -11,6 +11,8 @@ public:
 
     void Scan();
 
+	void Generate3D();
+
     int GetNumCaliImgs() const
     {
         return m_NumCaliImgs;
@@ -36,9 +38,14 @@ public:
 		m_BlockSize = s;
 	}
 
-	void SetFileName( vector<string> s )
+	void SetInputFileName( vector<string> s )
 	{
-		m_FileName = s;
+		m_InputFileName = s;
+	}
+
+	void SetOutputFileName( vector<string> s )
+	{
+		m_OutputFileName = s;
 	}
 
 	void SetPath( string s )
@@ -53,6 +60,12 @@ public:
 		cv::Mat& distCoeff );
 
 	void WriteStereoCamCaliResults();
+	void ReadStereoCamCaliResults(
+		const string path,
+		cv::Mat& R,
+		cv::Mat& T,
+		cv::Mat& E,
+		cv::Mat& F );
 
 	void WriteNumCaliImgs();
 	void ReadNumCaliImgs();
@@ -95,7 +108,8 @@ private:
 	int					m_CalibPatternWidth; // number of column of inner corners
 	int					m_CalibPatternHeight; // number of row of inner corners
 	float				m_BlockSize; // physical size of a chessboard block, in mm
-    vector<string>		m_FileName;
+    vector<string>		m_InputFileName;
+	vector<string>		m_OutputFileName;
 	string				m_Path;
 	vector<vector<vector<cv::Point2f>>>	    m_ImagePoints; // chessboard corners in 2D img coord; #caliImgs of #source of #corerns in a img
 	vector<vector<cv::Point3f>>	            m_ObjectPoints; // chessboard corners in 3D obj coord

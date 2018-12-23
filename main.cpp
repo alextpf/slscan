@@ -23,7 +23,8 @@ enum OPERATION {
 	CALIBRATE_LEFT,
 	CALIBRATE_RIGHT,
 	CALIBRATE_LEFT_AND_RIGHT,
-	MANUAL_SCAN,
+	MANUAL_SCAN_ONE_VIEW,
+	GENERATE_3D_ONE_VIEW,
 	AUTO_SCAN,
 	WRITE_CONFIG,
 	EXIT
@@ -44,7 +45,8 @@ void ReadConfig();
 bool CaptureAndOrCali(
 	string in,
 	string out,
-    vector<string> name,
+    vector<string> inName,
+	vector<string> outName,
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
 	vector<LiveViewProcessor::WEB_CAM_ID> webCamId,
@@ -103,7 +105,8 @@ int main()
                 const bool ok = CaptureAndOrCali(
                     "cali_data/left/",
                     "cali_data/left/",
-                    fileName,
+                    fileName, // input name, not used
+					fileName, // input name
                     WEBCAM,
                     IMG,
                     ids,
@@ -132,7 +135,8 @@ int main()
 			const bool ok = CaptureAndOrCali(
 				"cali_data/right/",
 				"cali_data/right/",
-                fileName,
+				fileName, // input name, not used
+				fileName, // input name
 				WEBCAM,
 				IMG,
 				ids,
@@ -166,7 +170,8 @@ int main()
             const bool ok = CaptureAndOrCali(
                 "cali_data/leftAndRight/",
                 "cali_data/leftAndRight/",
-                fileName,
+				fileName, // input name, not used
+				fileName, // input name
                 WEBCAM,
                 IMG,
                 ids,
@@ -194,7 +199,8 @@ int main()
 			const bool ok = CaptureAndOrCali(
 				"cali_data/left/",
 				"cali_data/left/",
-                fileName,
+				fileName, // input name
+				fileName, // input name, not used
 				IMG,
 				IMG,
 				ids,
@@ -272,12 +278,12 @@ int main()
         }
         break;
 
-        case MANUAL_SCAN:
+        case MANUAL_SCAN_ONE_VIEW:
         {
             vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+            //ids.push_back( LiveViewProcessor::DEFAULT_CAM );
             ids.push_back( LiveViewProcessor::LEFT_CAM );
-            //ids.push_back( LiveViewProcessor::RIGHT_CAM );
+            ids.push_back( LiveViewProcessor::RIGHT_CAM );
 
             vector<string> title;
             title.push_back( "Left Cam" );
@@ -309,6 +315,36 @@ int main()
         }
         break;
 
+		case GENERATE_3D_ONE_VIEW:
+		{
+			vector<LiveViewProcessor::WEB_CAM_ID> ids;
+			ids.push_back( LiveViewProcessor::LEFT_CAM );
+			ids.push_back( LiveViewProcessor::RIGHT_CAM );
+
+			vector<string> title;
+			title.push_back( "Left Cam" );
+			title.push_back( "Right Cam" );
+
+			vector<string> fileName;
+			fileName.push_back( "scan_left" );
+			fileName.push_back( "scan_right" );
+
+			const bool ok = CaptureAndOrCali(
+				"scan_data/",
+				"scan_data/",
+				fileName,
+				IMG,
+				NONE,
+				ids,
+				title );
+			if ( !ok )
+			{
+				return -1;
+			}
+
+		}
+		break;
+
         case AUTO_SCAN:
         {}
         break;
@@ -336,10 +372,11 @@ OPERATION MainMenu()
 	cout << "[4]: calibrate left camera\n";
 	cout << "[5]: calibrate right camera\n";
 	cout << "[6]: calibrate both left & right camera\n";
-	cout << "[7]: Manual Scan ( hit 'c' to capture one scan ) \n";
-	cout << "[8]: Auto Scan with turntable \n";
-	cout << "[9]: Write Config file \n";
-	cout << "[10]: Exit \n\n";
+	cout << "[7]: Manual Scan one view \n";
+	cout << "[8]: Generate 3D of scanned one view \n";
+	cout << "[9]: Auto Scan with turntable \n";
+	cout << "[10]: Write Config file \n";
+	cout << "[11]: Exit \n\n";
 	cout << "Answer: ";
 
 	int c;
@@ -389,7 +426,8 @@ void ReadConfig()
 bool CaptureAndOrCali(
 	string in,
 	string out,
-    vector<string> name,
+    vector<string> inName,
+	vector<string> outName,
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
 	vector<LiveViewProcessor::WEB_CAM_ID> webCamId,
@@ -409,7 +447,8 @@ bool CaptureAndOrCali(
 	processor.SetWidth( w );
 	processor.SetHeight( h );
 	processor.SetBlockSize( blockSize );
-	processor.SetFileName( name );
+	processor.SetInputFileName( inName );
+	processor.SetOutputFileName( outName );
 	processor.SetFileNameNumDigits( numDigit );
 	processor.SetCaptureAndCali( captureAndCali );
     processor.SetScaleFactorForShow( scaleFactor );
@@ -436,7 +475,7 @@ bool CaptureAndOrCali(
             for( int i = 0; i < endFrame; i++ )
             {
                 char buffer[100];
-                sprintf_s( buffer, "%s%s%02i.jpg", in.c_str(), name[j].c_str(), i );
+                sprintf_s( buffer, "%s%s%02i.jpg", in.c_str(), inName[j].c_str(), i );
 
                 string imgName = buffer;
                 tmp.push_back( imgName );
@@ -474,7 +513,7 @@ bool CaptureAndOrCali(
         for( int i = 0; i < numSource; i++ )
         {
             char buffer[100];
-            sprintf_s( buffer, "%s%s", out.c_str(), name[i].c_str() );
+            sprintf_s( buffer, "%s%s", out.c_str(), outName[i].c_str() );
 
             s.push_back( buffer );
         }
