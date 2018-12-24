@@ -125,10 +125,10 @@ bool GrayCode::GeneratePattern()
 	// generate black and white imgs
 	m_WhiteImage = cv::Mat( m_ProjectorHeight, m_ProjectorWidth, CV_8U, cv::Scalar( 255 ) );
 	m_BlackImage = cv::Mat( m_ProjectorHeight, m_ProjectorWidth, CV_8U, cv::Scalar( 0 ) );
-/*
+
 	m_Pattern.push_back( m_WhiteImage );
 	m_Pattern.push_back( m_BlackImage );
-*/
+
 	return true;
 }// GeneratePattern
 
@@ -147,8 +147,8 @@ void GrayCode::ComputeNumPatternImgs( const int w, const int h )
 
 //===========================================================================
 void GrayCode::GenerateShadowMask(
-    const vector<cv::Mat>& blackImg,
-    const vector<cv::Mat>& whiteImg )
+	const vector<cv::Mat>& whiteImg,
+	const vector<cv::Mat>& blackImg )
 {
     const int numSrc = 2;
 
@@ -189,12 +189,12 @@ void GrayCode::GenerateShadowMask(
 //===========================================================================
 bool GrayCode::Decode(
     const vector<vector<cv::Mat>>& captured,
-    const vector<cv::Mat>& blackImages,
-    const vector<cv::Mat>& whiteImages )
+    const vector<cv::Mat>& whiteImages,
+    const vector<cv::Mat>& blackImages )
 {
     const int numSrc = static_cast<int>( captured.size() );
 
-    GenerateShadowMask( blackImages, whiteImages );
+    GenerateShadowMask( whiteImages, blackImages );
 
 	std::map     < int /*(x * ImgHeight + y) on the captured image */, int /*(x * ProjHeight + y) decoded decimal*/ > leftCam;
 	std::multimap< int /*(x * ProjHeight + y) decoded decimal*/,	   int /*(x * ImgHeight + y) on the captured image */ > rightCam;

@@ -11,8 +11,8 @@ public:
 
     bool Decode(
         const vector<vector<cv::Mat> >& captured,
-        const vector<cv::Mat>& blackImages,
-        const vector<cv::Mat>& whiteImages );
+		const vector<cv::Mat>& whiteImages,
+		const vector<cv::Mat>& blackImages );
 
 	void ComputeNumPatternImgs(const int w, const int h );
 
@@ -41,6 +41,16 @@ public:
         m_BlackThresh = b;
     }
 
+	int GetNumPatternImgs()
+	{
+		return m_NumPatternImgs;
+	}
+
+	cv::Mat GetDisparityMap()
+	{
+		return m_DisparityMap;
+	}
+
 private:
 
     // convert Gray code to decimal
@@ -54,8 +64,8 @@ private:
         cv::Point& projPix );
 
     void GenerateShadowMask(
-        const vector<cv::Mat>& blackImg,
-        const vector<cv::Mat>& whiteImg );
+		const vector<cv::Mat>& whiteImg,
+		const vector<cv::Mat>& blackImg );
 
 	void SetProjectorWidth( const int w ) // called in ComputeNumPatternImgs
 	{

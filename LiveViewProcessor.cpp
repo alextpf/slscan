@@ -69,7 +69,7 @@ void LiveViewProcessor::WriteNextFrame( vector<cv::Mat>& frame )
 		for ( int i = 0; i < m_NumSource; i++ )
 		{
 			std::stringstream ss;
-			ss << m_OutputFile[i] << std::setfill( '0' ) << std::setw( m_Digits ) << m_CurrentIndex++ << m_Extension;
+			ss << m_OutputFile[i] << std::setfill( '0' ) << std::setw( m_Digits ) << m_CurrentIndex[i]++ << m_Extension;
 			cv::imwrite( ss.str(), frame[i] );
 		}
     }
@@ -180,14 +180,16 @@ bool LiveViewProcessor::SetOutput(
     for( int i = 0; i < m_NumSource; i++ )
     {
 		m_OutputFile.push_back( filename[i] );
+
+		// start numbering at this index
+		m_CurrentIndex.push_back( startIndex );
     }
 
     m_Extension = ext;
 
     // number of m_Digits in the file numbering scheme
     m_Digits = numberOfDigits;
-    // start numbering at this index
-    m_CurrentIndex = startIndex;
+
 
 	return true;
 }

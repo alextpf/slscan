@@ -98,11 +98,10 @@ public:
     // to display the processed frames
     void DisplayOutput( vector<string> wn )
     {
-        for( int i = 0; i < m_NumSource; i++ )
+        for( int i = 0; i < wn.size(); i++ )
         {
             m_WindowNameOutput.push_back( wn[i] );
 			cv::namedWindow( m_WindowNameOutput[i] );
-			//cv::resizeWindow( m_WindowNameOutput[i], 1280, 720 );
         }
     }
 
@@ -281,7 +280,7 @@ protected:
 	vector<string>              m_OutputFile;
 
     // current index for output Images
-    int                         m_CurrentIndex;
+    vector<int>                 m_CurrentIndex;
 
     // number of digits in output image filename
     int                         m_Digits;

@@ -1,6 +1,7 @@
 #pragma once
 #include "LiveViewProcessor.h"
 #include "GrayCode.h"
+#include "Exporter.h"
 
 class Calibrator : public LiveViewProcessor
 {
@@ -23,12 +24,12 @@ public:
 		m_NumCaliImgs = s;
 	}
 
-    void SetWidth( const int w )
+    void SetCaliPatternWidth( const int w )
     {
 		m_CalibPatternWidth = w;
     }
 
-    void SetHeight( const int h )
+    void SetCaliPatternHeight( const int h )
     {
 		m_CalibPatternHeight = h;
     }
@@ -99,7 +100,11 @@ public:
 		m_ProjWinName = s;
 	}
 
+	int ReadNumPatterns();
+
 private:
+	void WriteNumPatterns();
+
     void DisplayFrame( const vector<string>& winName, const vector<cv::Mat>& output );
 
 	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );

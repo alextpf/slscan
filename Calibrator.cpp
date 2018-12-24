@@ -1,5 +1,9 @@
 #include <windows.h> // WinApi header
 #include <opencv2/opencv.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/core.hpp>
+
 #include "Calibrator.h"
 
 //=======================================================================
@@ -92,10 +96,14 @@ void Calibrator::Generate3D()
 	ReadSingleCamCaliResults( rightPath, M2, D2 );
 
 	// read calibration result of the stereo rig
-	string seteroPath = "cali_data/leftAndRight";
+	string seteroPath = "cali_data/leftAndRight/";
 	cv::Mat R, T, E, F;
 
 	ReadStereoCamCaliResults( seteroPath, R, T, E, F );
+
+	// read one picture to get image size
+	cv::Mat tmp = cv::imread( *( m_ItImg[0] ) );
+	m_ImgSiz = tmp.size();
 
 	// Stereo Rectify
 	cv::Mat R1, R2, P1, P2, Q;
@@ -108,8 +116,8 @@ void Calibrator::Generate3D()
 	initUndistortRectifyMap( M1, D1, R1, P1, m_ImgSiz, CV_32FC1, map1x, map1y );
 	initUndistortRectifyMap( M2, D2, R2, P2, m_ImgSiz, CV_32FC1, map2x, map2y );
 
-	//=================
-	// Now process each of the captured pattern
+	//==============================================================
+	// Now process each of the captured pattern, by rectifying them
 
 	// current frame
 	vector<cv::Mat> frame;
@@ -126,6 +134,9 @@ void Calibrator::Generate3D()
 	m_Stop = false;
 	bool ok( true );
 
+	vector<cv::Mat> left;
+	vector<cv::Mat> right;
+
 	while ( !IsStopped() )
 	{
 		// read next frame if any
@@ -135,25 +146,108 @@ void Calibrator::Generate3D()
 			break;
 		}
 
-		DisplayFrame( m_WindowNameInput, frame );
+		//DisplayFrame( m_WindowNameInput, frame );
 
 		for ( int i = 0; i < m_NumSource; i++ )
 		{
 			cv::remap( frame[i], output[i], map1x, map1y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
-
-			// save the rectified img
-			WriteImg( m_OutputFileName[i], output[i], m_TotalFrame );
 		}
 
-		DisplayFrame( m_WindowNameOutput, output );
+		left.push_back( output[0].clone() ); // left
+		right.push_back( output[1].clone() ); // right
+
+		if ( m_WindowNameOutput.size() != 0 )
+		{
+			DisplayFrame( m_WindowNameOutput, output );
+		}
+
+		// write output sequence
+		if ( m_OutputFile[0].length() != 0 )
+		{
+			//WriteNextFrame( output );
+		}
+
+		cv::waitKey( m_Delay );
 
 		// check if we should stop
-		if ( m_FrameToStop >= 0 && GetFrameNumber() == m_FrameToStop )
+		if ( m_ItImg[0] == m_Images[0].end() )
 		{
 			StopIt();
 		}
 	} // while ( !IsStopped() )
 
+	// after all the images are processed
+	// close window
+	for ( int i = 0; i < m_NumSource; i++ )
+	{
+		cv::destroyWindow( m_WindowNameOutput[i] );
+	}
+
+	//sanity check
+	int patternSize = static_cast<int>( left.size() );
+	patternSize -= 2;
+
+	if ( patternSize != m_GrayCode.GetNumPatternImgs() )
+	{
+		cout << "number pattern error/n";
+		return;
+	}
+
+	// last 2 imgs are white & black img, for shadow calculation use
+	vector<cv::Mat> white;
+	white.push_back( left[patternSize] );
+	white.push_back( right[patternSize] );
+
+	vector<cv::Mat> black;
+	black.push_back( left[patternSize + 1] );
+	black.push_back( right[patternSize + 1] );
+
+	//debug
+	if ( false )
+	{
+		cv::imshow( "white left", left[patternSize] );
+		cv::imshow( "white right", right[patternSize] );
+		cv::imshow( "black left", left[patternSize + 1] );
+		cv::imshow( "black right", right[patternSize + 1] );
+	}
+	//=========
+
+	left.pop_back();	left.pop_back();
+	right.pop_back();	right.pop_back();
+
+	vector<vector<cv::Mat>> captured;
+	captured.push_back( left );
+	captured.push_back( right );
+
+	//debug
+	if ( false )
+	{
+		for ( int u = 0; u < 2; u++ )
+		{
+			for ( int m = 0; m < captured[u].size(); m++ )
+			{
+				std::stringstream ss;
+				ss << "cap-" << u << "-" << m;
+
+				cv::imshow( ss.str(), captured[u][m] );
+			}
+		}
+		cv::waitKey( 0 );
+	}
+	//==========
+
+	//restructure captured such that its size is like 2 (left & right) x NumPatternImgs x images
+
+	m_GrayCode.Decode( captured, white, black );
+
+	cv::Mat pointcloud;
+	cv::Mat disp = m_GrayCode.GetDisparityMap();
+
+	disp.convertTo( disp, CV_32FC1 );
+	cv::reprojectImageTo3D( disp, pointcloud, Q, true, -1 );
+
+	// export
+	Exporter::ExportToObj( pointcloud, "results.obj" );
 } // Generate3D
 
 //=======================================================================
@@ -249,6 +343,9 @@ void Calibrator::Scan()
 		}//if ( manualAccept )
 
 	} // for i
+
+	// save number of patterns
+	WriteNumPatterns();
 }//Scan
 
 //=======================================================================
@@ -370,7 +467,7 @@ void Calibrator::WriteStereoCamCaliResults()
 }//WriteStereoCamCaliResults
 
 //===============================================
-void ReadStereoCamCaliResults(
+void Calibrator::ReadStereoCamCaliResults(
 	const string path,
 	cv::Mat& R,
 	cv::Mat& T,
@@ -387,6 +484,27 @@ void ReadStereoCamCaliResults(
 
 	fs.release();
 } // ReadStereoCamCaliResults
+
+//===============================================
+void Calibrator::WriteNumPatterns()
+{
+	string s = m_Path + "NumPatterns.xml";
+	cv::FileStorage fs( s, cv::FileStorage::WRITE );
+	fs << "NumPatterns" << m_GrayCode.GetNumPatternImgs() + 2 /*black & white*/;
+	fs.release();
+}//WriteNumPatterns
+
+//===============================================
+int Calibrator::ReadNumPatterns()
+{
+	string s = m_Path + "NumPatterns.xml";
+	cv::FileStorage fs( s, cv::FileStorage::READ );
+	int m;
+	fs["NumPatterns"] >> m;
+	fs.release();
+
+	return m;
+}//WriteNumPatterns
 
 //===============================================
 void Calibrator::WriteNumCaliImgs()

@@ -50,8 +50,16 @@ bool CaptureAndOrCali(
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
 	vector<LiveViewProcessor::WEB_CAM_ID> webCamId,
-    vector<string> title
-	);
+	vector<string> title );
+
+bool Calculate3DPrepare(
+	string in,
+	string out,
+	vector<string> inName,
+	vector<string> outName,
+	SOURCE_TYPE inType,
+	SOURCE_TYPE outType,
+	vector<string> title );
 
 //======================================
 //globals
@@ -106,7 +114,7 @@ int main()
                     "cali_data/left/",
                     "cali_data/left/",
                     fileName, // input name, not used
-					fileName, // input name
+					fileName, // output name
                     WEBCAM,
                     IMG,
                     ids,
@@ -136,7 +144,7 @@ int main()
 				"cali_data/right/",
 				"cali_data/right/",
 				fileName, // input name, not used
-				fileName, // input name
+				fileName, // output name
 				WEBCAM,
 				IMG,
 				ids,
@@ -171,7 +179,7 @@ int main()
                 "cali_data/leftAndRight/",
                 "cali_data/leftAndRight/",
 				fileName, // input name, not used
-				fileName, // input name
+				fileName, // output name
                 WEBCAM,
                 IMG,
                 ids,
@@ -200,7 +208,7 @@ int main()
 				"cali_data/left/",
 				"cali_data/left/",
 				fileName, // input name
-				fileName, // input name, not used
+				fileName, // output name
 				IMG,
 				IMG,
 				ids,
@@ -229,6 +237,7 @@ int main()
 				"cali_data/right/",
 				"cali_data/right/",
                 fileName,
+				fileName,
 				IMG,
 				IMG,
 				ids,
@@ -263,6 +272,7 @@ int main()
                 "cali_data/leftAndRight/",
                 "cali_data/leftAndRight/",
                 fileName,
+				fileName,
                 IMG,
                 IMG,
                 ids,
@@ -300,6 +310,7 @@ int main()
                 "scan_data/",
                 "scan_data/",
                 fileName,
+				fileName,
                 WEBCAM,
                 IMG,
                 ids,
@@ -317,31 +328,32 @@ int main()
 
 		case GENERATE_3D_ONE_VIEW:
 		{
-			vector<LiveViewProcessor::WEB_CAM_ID> ids;
-			ids.push_back( LiveViewProcessor::LEFT_CAM );
-			ids.push_back( LiveViewProcessor::RIGHT_CAM );
+			vector<string> inputFileName;
+			inputFileName.push_back( "scan_left" );
+			inputFileName.push_back( "scan_right" );
+
+			vector<string> outputFileName;
+			outputFileName.push_back( "scan_left_rectified" );
+			outputFileName.push_back( "scan_right_rectified" );
 
 			vector<string> title;
 			title.push_back( "Left Cam" );
 			title.push_back( "Right Cam" );
 
-			vector<string> fileName;
-			fileName.push_back( "scan_left" );
-			fileName.push_back( "scan_right" );
+			processor.SetProjectorDimension( projW, projH );
 
-			const bool ok = CaptureAndOrCali(
+			const bool ok = Calculate3DPrepare(
 				"scan_data/",
 				"scan_data/",
-				fileName,
+				inputFileName,
+				outputFileName,
 				IMG,
 				NONE,
-				ids,
 				title );
 			if ( !ok )
 			{
 				return -1;
 			}
-
 		}
 		break;
 
@@ -431,8 +443,7 @@ bool CaptureAndOrCali(
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
 	vector<LiveViewProcessor::WEB_CAM_ID> webCamId,
-    vector<string> title
-)
+    vector<string> title )
 {
 	// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
 
@@ -444,8 +455,8 @@ bool CaptureAndOrCali(
 
 	processor.SetNumSource( numSource ); // num of camera
 	processor.SetDelay( delay );
-	processor.SetWidth( w );
-	processor.SetHeight( h );
+	processor.SetCaliPatternWidth( w );
+	processor.SetCaliPatternHeight( h );
 	processor.SetBlockSize( blockSize );
 	processor.SetInputFileName( inName );
 	processor.SetOutputFileName( outName );
@@ -461,9 +472,9 @@ bool CaptureAndOrCali(
 	case IMG:
 	{
 		processor.SetDoCali( true );
-		processor.ReadNumCaliImgs(); // assuming previously we have captured the cali imgs
 
 		const int startFrame = 0;// frame number we want to start at
+		processor.ReadNumCaliImgs(); // assuming previously we have captured the cali imgs
 		const int endFrame = processor.GetNumCaliImgs();
 		processor.SetNumCaliImgs( 0 ); // reset
 
@@ -528,3 +539,93 @@ bool CaptureAndOrCali(
 
 	return true;
 }//CaptureAndOrCali
+
+//=========================
+bool Calculate3DPrepare(
+	string in,
+	string out,
+	vector<string> inName,
+	vector<string> outName,
+	SOURCE_TYPE inType,
+	SOURCE_TYPE outType,
+	vector<string> title )
+{
+	// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+
+	delay = 1; // ms
+	const int numDigit = 2;
+	const int numSource = 2;
+	const float scaleFactor = 0.4f;
+
+	processor.SetNumSource( numSource ); // num of camera
+	processor.SetDelay( delay );
+	processor.SetInputFileName( inName );
+	processor.SetOutputFileName( outName );
+	processor.SetFileNameNumDigits( numDigit );
+	processor.SetPath( in );
+	processor.DisplayOutput( title );
+	processor.SetScaleFactorForShow( scaleFactor );
+
+	//====================================
+	switch ( inType )
+	{
+	case IMG:
+	{
+		processor.SetDoCali( true );
+
+		const int startFrame = 0;// frame number we want to start at
+		const int endFrame = processor.ReadNumPatterns(); // assuming previously we have captured the cali imgs
+
+		vector<vector<string>> imgs;
+
+		for ( int j = 0; j < numSource; j++ )
+		{
+			vector<string> tmp;
+			for ( int i = 0; i < endFrame; i++ )
+			{
+				char buffer[100];
+				sprintf_s( buffer, "%s%s%02i.jpg", in.c_str(), inName[j].c_str(), i );
+
+				string imgName = buffer;
+				tmp.push_back( imgName );
+			}
+			imgs.push_back( tmp );
+		}
+
+		processor.SetInput( imgs );
+	} // case IMG
+	break;
+	break;
+
+	default:
+		break;
+	}//switch inputtype
+
+	switch ( outputType )
+	{
+	case IMG:
+	{
+		/////////////////////////
+		// output: images
+		/////////////////////////
+		vector<string> s;
+		for ( int i = 0; i < numSource; i++ )
+		{
+			char buffer[100];
+			sprintf_s( buffer, "%s%s", out.c_str(), outName[i].c_str() );
+
+			s.push_back( buffer );
+		}
+
+		processor.SetOutput( s, ".jpg", numDigit );
+	}
+	break;
+
+	default:
+		break;
+	}//switch ( outputType )
+
+	processor.Generate3D();
+
+	return true;
+}//Calculate3DPrepare
