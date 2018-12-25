@@ -14,11 +14,11 @@ void Exporter::ExportToObj(
 
 	std::cout << "Export " << path << "...";
 
-	for ( int i = 0; i < w; i++ )
+	for ( int r = 0; r < h; r++ )
 	{
-		for ( int j = 0; j < h; j++ )
+		for ( int c = 0; c < w; c++ )
 		{
-			cv::Point3f p = pts.at<double>( i, j );
+			cv::Point3f p = pts.at<float>( r, c );
 			out << "v " << p.x << " " << p.y << " " << p.z << "\n";
 		}
 	}

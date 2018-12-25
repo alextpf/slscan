@@ -2,6 +2,7 @@
 #include <opencv2/highgui.hpp>
 #include <map> // for multimap, in Decode
 #include <iostream>
+#include <fstream>
 
 #include "GrayCode.h"
 
@@ -174,11 +175,11 @@ void GrayCode::GenerateShadowMask(
 
                 if( abs( white - black ) > m_BlackThresh )
                 {
-                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)1;
+                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)0; // is not shadow
                 }
                 else
                 {
-                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)0;
+                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)1; // is shadow
                 }
             }// for y
         }//for x
@@ -196,100 +197,201 @@ bool GrayCode::Decode(
 
     GenerateShadowMask( whiteImages, blackImages );
 
-	std::map     < int /*(x * ImgHeight + y) on the captured image */, int /*(x * ProjHeight + y) decoded decimal*/ > leftCam;
-	std::multimap< int /*(x * ProjHeight + y) decoded decimal*/,	   int /*(x * ImgHeight + y) on the captured image */ > rightCam;
+	//std::map     < int /*(x * ImgHeight + y) on the captured image */, int /*(x * ProjHeight + y) decoded decimal*/ > leftCam;
+	//std::multimap< int /*(x * ProjHeight + y) decoded decimal*/,	   int /*(x * ImgHeight + y) on the captured image */ > rightCam;
 
-    for( int k = 0; k < numSrc; k++ ) // number of source (2, cameras)
-    {
-        for( int x = 0; x < m_ImgWidth; x++ ) // col
-        {
-            for( int y = 0; y < m_ImgHeight; y++ ) // row
-            {
-                //if the pixel is not shadowed, reconstruct
-                if( m_ShadowMask[k].at<uchar>( y, x ) )
-                {
-					cv::Point imgLoc( x, y );
-                    cv::Point decimal; // decoded decimal number corresponding to to a (x,y) on the image
+	//bool loadFromSavedMap = false;
+	//if ( loadFromSavedMap )
+	//{
+	//	std::ifstream logLeftCam;
+	//	logLeftCam.open( "leftCamMap.txt", std::ifstream::in );
 
-                    //for a (x,y) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
-                    bool ok = GetProjPixel( captured[k], x, y, decimal );
+	//	std::ifstream logRightCam;
+	//	logRightCam.open( "rightCamMap.txt", std::ifstream::in );
 
-                    if( !ok )
-                    {
-                        continue;
-                    }
+	//	string line;
+	//	while ( getline( logLeftCam, line ) )
+	//	{
+	//		int imgLocIdx, decimalIdx;
+	//		stringstream stream;
+	//		stream.str( line );
+	//		stream >> imgLocIdx;
+	//		stream >> decimalIdx;
 
-					const int imgLocIdx = XYToIdx( imgLoc, m_ImgHeight );
-					const int decimalIdx = XYToIdx( decimal, m_ProjectorHeight );
+	//		leftCam.insert( std::make_pair( imgLocIdx, decimalIdx ) );
 
-					if ( k == 0 )
-					{
-						// left cam
-						leftCam.insert( std::make_pair( imgLocIdx, decimalIdx ) );
-					}
-					else
-					{
-						// right cam
-						rightCam.insert( std::make_pair( decimalIdx, imgLocIdx ) );
-					}// if k == 0
-                }
-            } // for y
-        } // for x
-    }// for k
+	//	}//while
+	//	logLeftCam.close();
 
-    m_DisparityMap = cv::Mat( m_ImgHeight, m_ImgWidth, CV_32F, 0 );
+	//	while ( getline( logRightCam, line ) )
+	//	{
+	//		int imgLocIdx, decimalIdx;
+	//		stringstream stream;
+	//		stream.str( line );
+	//		stream >> decimalIdx;
+	//		stream >> imgLocIdx;
 
-	std::map      < int, int>::iterator itLeft;
-	std::multimap < int, int>::iterator itRight;
+	//		rightCam.insert( std::make_pair( decimalIdx, imgLocIdx ) );
+	//	}//while
+	//	logRightCam.close();
+	//}
+	//else
+	//{
+	//	// logger
+	//	bool log = true;
+	//	std::ofstream logLeftCam;
+	//	logLeftCam.open( "leftCamMap.txt", std::ios_base::out ); // fresh file
+	//	logLeftCam.close();
+	//	logLeftCam.open( "leftCamMap.txt", std::ios_base::app ); // append mode
+
+	//	std::ofstream logRightCam;
+	//	logRightCam.open( "rightCamMap.txt", std::ios_base::out ); // fresh file
+	//	logRightCam.close();
+	//	logRightCam.open( "rightCamMap.txt", std::ios_base::app ); // append mode
+	//	//=================
+
+	//	for ( int k = 0; k < numSrc; k++ ) // number of source (2, cameras)
+	//	{
+	//		for ( int x = 0; x < m_ImgWidth; x++ ) // col
+	//		{
+	//			for ( int y = 0; y < m_ImgHeight; y++ ) // row
+	//			{
+	//				//if the pixel is not shadowed, reconstruct
+	//				if ( m_ShadowMask[k].at<uchar>( y, x ) == 0 ) // not shadow
+	//				{
+	//					cv::Point imgLoc( x, y );
+	//					cv::Point decimal; // decoded decimal number corresponding to to a (x,y) on the image
+
+	//					//for a (x,y) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
+	//					bool ok = GetProjPixel( captured[k], x, y, decimal );
+
+	//					if ( !ok )
+	//					{
+	//						continue;
+	//					}
+
+	//					const int imgLocIdx = XYToIdx( imgLoc, m_ImgHeight );
+	//					const int decimalIdx = XYToIdx( decimal, m_ProjectorHeight );
+
+	//					if ( k == 0 )
+	//					{
+	//						// left cam
+	//						leftCam.insert( std::make_pair( imgLocIdx, decimalIdx ) );
+
+	//						if ( log )
+	//						{
+	//							//save the maps
+	//							logLeftCam << imgLocIdx << " " << decimalIdx << endl;
+	//						}
+	//					}
+	//					else
+	//					{
+	//						// right cam
+	//						rightCam.insert( std::make_pair( decimalIdx, imgLocIdx ) );
+
+	//						if ( log )
+	//						{
+	//							//save the maps
+	//							logRightCam << decimalIdx << " " << imgLocIdx << endl;
+	//						}
+	//					}// if k == 0
+	//				}
+	//			} // for y
+	//		} // for x
+	//	}// for k
+
+	//	logLeftCam.close();
+	//	logRightCam.close();
+	//}// if loadFromSavedMap
+
+	m_DisparityMap = cv::Mat::zeros( m_ImgHeight, m_ImgWidth, CV_32S );
 
 	int marker = 0; // running marker which indicate where the pix is on the right img
-	int rightLimit;
 
-	for ( int r = 0; r < m_ImgHeight; r++ )
+	unsigned int numMatchedPts = 0;
+
+	//debug flat; show images
+	bool showImgs = true;
+	bool saveDisp = true;
+
+	std::ofstream disp;
+	disp.open( "Disparity.txt", std::ios_base::out ); // fresh file
+
+	bool loadDisp = false;
+	if ( loadDisp )
 	{
-		for ( int c = 0; c < m_ImgWidth; c++ )
+		std::ifstream disparity;
+		disparity.open( "Disparity.txt", std::ifstream::in );
+
+		string line;
+		while ( getline( disparity, line ) )
 		{
-			rightLimit = c;
+			int r, c, d;
+			stringstream stream;
+			stream.str( line );
+			stream >> r;
+			stream >> c;
+			stream >> d;
 
-			cv::Point leftPix( r, c );
-			const int leftPixIdx = XYToIdx( leftPix, m_ImgHeight );
-			itLeft = leftCam.find( leftPixIdx );
-
-			if ( itLeft != leftCam.end() )
+			m_DisparityMap.at<int>( r, c ) = d;
+			numMatchedPts++;
+		}//while
+		disparity.close();
+	}
+	else
+	{
+		// scan line fashion to find the correspondance
+		for ( int rl = 0; rl < m_ImgHeight; rl++ )
+		{
+			for ( int cl = 0; cl < m_ImgWidth; cl++ )
 			{
-				int dec = itLeft->second;
-				int rightPixIdx;
-				cv::Point winner; // final winner
-
-				int leftMost = m_ImgWidth;
-				bool ok( false );
-
-				for ( itRight = rightCam.equal_range( dec ).first; itRight != rightCam.equal_range( dec ).second; ++itRight )
+				//if the pixel is not shadowed, reconstruct
+				if ( m_ShadowMask[0].at<uchar>( rl, cl ) == 0 ) // not shadow
 				{
-					rightPixIdx = ( *itRight ).second;
-					cv::Point rightPix;
-					IdxToXY( rightPixIdx, rightPix, m_ImgHeight );
+					cv::Point decimalLeft;
 
-					// evaluate the legit of the found pix
-					if ( rightPix.y == r &&
-						 rightPix.x > marker/* "continuity constraint" */ &&
-						 rightPix.x < rightLimit /* "parallell constraint" */ &&
-						 rightPix.x < leftMost )
+					//for a (x,y) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
+					bool ok = GetProjPixel( captured[0], cl, rl, decimalLeft );
+
+					if ( !ok )
 					{
-						ok = true;
-						leftMost = rightPix.x;
-					} // if ( rightPix.y == r )
-				}// for
+						continue;
+					}
 
-				if ( ok )
-				{
-					m_DisparityMap.at<double>( r, c ) = leftMost - r;
-				}
-			}//if
-		}// for c
+					// search on the right image, the same row
+					for ( int cr = marker; cr < cl; cr++ )
+					{
+						cv::Point decimalRight;
+						bool ok = GetProjPixel( captured[1], cr, rl, decimalRight );
 
-		marker = 0; //reset the marker
-	}// for r
+						if ( !ok )
+						{
+							continue;
+						}
+
+						if ( decimalLeft == decimalRight &&
+							m_ShadowMask[1].at<uchar>( rl, cr ) == 0 /*not shadow*/ ) // is a match!
+						{
+							marker = cr;
+							m_DisparityMap.at<int>( rl, cl ) = cr - cl;
+							numMatchedPts++;
+							if ( saveDisp )
+							{
+								disp << rl << " " << cl << " " << cr - cl << endl;
+							}
+							break;
+						}
+					}// for cr
+				} //if ( m_ShadowMask[0].at<uchar>( rl, cl ) == 0 ) // not shadow
+			}// for cl
+
+			marker = 0; //reset the marker
+		}// for rl
+
+		disp.close();
+	} // if ( loadDisp )
+
+	cout << "mumber of matched pts: " << numMatchedPts << endl;
 
 	/*
 	std::vector<cv::Point> cam1Pixs, cam2Pixs;

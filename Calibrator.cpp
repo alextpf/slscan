@@ -5,6 +5,32 @@
 #include <opencv2/core.hpp>
 
 #include "Calibrator.h"
+//=======================================================================
+// helper function to show type
+std::string type2str( int type )
+{
+	std::string r;
+
+	uchar depth = type & CV_MAT_DEPTH_MASK;
+	uchar chans = 1 + ( type >> CV_CN_SHIFT );
+
+	switch ( depth )
+	{
+	case CV_8U:  r = "8U"; break;
+	case CV_8S:  r = "8S"; break;
+	case CV_16U: r = "16U"; break;
+	case CV_16S: r = "16S"; break;
+	case CV_32S: r = "32S"; break;
+	case CV_32F: r = "32F"; break;
+	case CV_64F: r = "64F"; break;
+	default:     r = "User"; break;
+	}
+
+	r += "C";
+	r += ( chans + '0' );
+
+	return r;
+}//std::string type2str(int type)
 
 //=======================================================================
 Calibrator::Calibrator()
@@ -136,6 +162,7 @@ void Calibrator::Generate3D()
 
 	vector<cv::Mat> left;
 	vector<cv::Mat> right;
+	string rectifyWinName = "Rectified";
 
 	while ( !IsStopped() )
 	{
@@ -146,17 +173,19 @@ void Calibrator::Generate3D()
 			break;
 		}
 
-		//DisplayFrame( m_WindowNameInput, frame );
-
-		for ( int i = 0; i < m_NumSource; i++ )
+		if ( false ) // no need to display input images
 		{
-			cv::remap( frame[i], output[i], map1x, map1y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
+			DisplayFrame( m_WindowNameInput, frame );
 		}
+
+		// rectify images
+		cv::remap( frame[0], output[0], map1x, map1y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
+		cv::remap( frame[1], output[1], map2x, map2y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
 
 		left.push_back( output[0].clone() ); // left
 		right.push_back( output[1].clone() ); // right
 
-		if ( m_WindowNameOutput.size() != 0 )
+		if ( false )//no need to individually display rectified imgs
 		{
 			DisplayFrame( m_WindowNameOutput, output );
 		}
@@ -164,9 +193,36 @@ void Calibrator::Generate3D()
 		// write output sequence
 		if ( m_OutputFile[0].length() != 0 )
 		{
-			//WriteNextFrame( output );
+			WriteNextFrame( output );
 		}
 
+		//write a composite pair image
+		cv::Mat pair;
+		pair.create( m_ImgSiz.height, m_ImgSiz.width * 2, CV_8UC3 );
+
+		cv::Mat part = pair.colRange( 0, m_ImgSiz.width );
+
+		output[0].copyTo( part ); // left
+
+		part = pair.colRange( m_ImgSiz.width, m_ImgSiz.width * 2 );
+
+		output[1].copyTo( part ); // right
+
+		for ( int j = 0; j < m_ImgSiz.height; j += 16 )
+		{
+			cv::line( pair, cv::Point( 0, j ), cv::Point( m_ImgSiz.width * 2, j ),
+				cv::Scalar( 0, 255, 0 ) );
+		}
+
+		cv::Mat downSize;
+		cv::resize( pair, downSize, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
+
+		cv::imshow( rectifyWinName, downSize );
+		cv::moveWindow( rectifyWinName, 0, 0 );
+
+		// save the image
+		WriteImg( "rectified", pair, m_CurrentIndex[0]-1 );
+		//================================================
 		cv::waitKey( m_Delay );
 
 		// check if we should stop
@@ -182,6 +238,7 @@ void Calibrator::Generate3D()
 	{
 		cv::destroyWindow( m_WindowNameOutput[i] );
 	}
+	cv::destroyWindow( rectifyWinName );
 
 	//sanity check
 	int patternSize = static_cast<int>( left.size() );
@@ -241,10 +298,16 @@ void Calibrator::Generate3D()
 	m_GrayCode.Decode( captured, white, black );
 
 	cv::Mat pointcloud;
-	cv::Mat disp = m_GrayCode.GetDisparityMap();
+	cv::Mat disp = m_GrayCode.GetDisparityMap(); // CV_32S
 
-	disp.convertTo( disp, CV_32FC1 );
 	cv::reprojectImageTo3D( disp, pointcloud, Q, true, -1 );
+
+	if ( false )
+	{
+		// get mat type
+		std::string typeName = type2str( pointcloud.type() );
+		cout << typeName.c_str() << endl;
+	}
 
 	// export
 	Exporter::ExportToObj( pointcloud, "results.obj" );
@@ -299,7 +362,7 @@ void Calibrator::Scan()
 		}
 
         // pause a bit for the pattern to be shown
-        int pauseMs = 500; // in ms
+        int pauseMs = 200; // in ms
         cv::waitKey( pauseMs );
 
 		bool ok = ReadNextFrame( frame );
@@ -791,10 +854,7 @@ void Calibrator::Calibrate()
 				// save the image
 				WriteImg( "rectified", pair, i );
 
-				if ( ( cv::waitKey(0) & 255 ) == 27 )
-				{
-					break;
-				}
+				cv::waitKey( 1 );
 			}//for ( int i = 0; i < m_NumCaliImgs; i++ )
 		}//if ( showUndistorted )
 	}
