@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "GrayCode.h"
+#define GREEN  cv::Scalar(   0, 255,   0 )
 
 //======================================
 GrayCode::GrayCode()
@@ -175,11 +176,11 @@ void GrayCode::GenerateShadowMask(
 
                 if( abs( white - black ) > m_BlackThresh )
                 {
-                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)0; // is not shadow
+                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)1; // is not shadow
                 }
                 else
                 {
-                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)1; // is shadow
+                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)0; // is shadow
                 }
             }// for y
         }//for x
@@ -314,9 +315,6 @@ bool GrayCode::Decode(
 	bool showImgs = true;
 	bool saveDisp = true;
 
-	std::ofstream disp;
-	disp.open( "Disparity.txt", std::ios_base::out ); // fresh file
-
 	bool loadDisp = false;
 	if ( loadDisp )
 	{
@@ -340,13 +338,46 @@ bool GrayCode::Decode(
 	}
 	else
 	{
+		std::ofstream disp;
+		disp.open( "Disparity.txt", std::ios_base::out ); // fresh file
+
+		cv::Mat leftImg; // white img
+		cv::Mat rightImg; // white img
+
+		cv::resize( whiteImages[0], leftImg, cv::Size(), 0.4f, 0.4f, cv::INTER_LINEAR );
+		cv::resize( whiteImages[1], rightImg, cv::Size(), 0.4f, 0.4f, cv::INTER_LINEAR );
+		string leftName = "Left";
+		string rightName = "Right";
+
+		unsigned int total = m_ImgHeight * m_ImgWidth;
+
 		// scan line fashion to find the correspondance
-		for ( int rl = 0; rl < m_ImgHeight; rl++ )
+		for ( int rl = 0; rl < m_ImgHeight; rl++ ) // row, left
 		{
-			for ( int cl = 0; cl < m_ImgWidth; cl++ )
+			for ( int cl = 0; cl < m_ImgWidth; cl++ ) // col, right
 			{
+				if ( showImgs )
+				{
+					int off = 2;
+					int thick = 2;
+					cv::Mat tmpLeft = leftImg.clone();
+					cv::Point p1( cl - off, rl - off );
+					cv::Point p2( cl + off, rl + off );
+					cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
+
+					cv::imshow( leftName, tmpLeft );
+					cv::moveWindow( leftName, 0, 0 );
+					cv::waitKey( 1 );
+				}
+
+				unsigned int idx = rl * m_ImgWidth + cl;
+
+				float percentage = float( idx ) / float( total ) * 100.0f;
+
+				cout << percentage << "%\n";
+
 				//if the pixel is not shadowed, reconstruct
-				if ( m_ShadowMask[0].at<uchar>( rl, cl ) == 0 ) // not shadow
+				if ( m_ShadowMask[0].at<uchar>( cv::Point( cl, rl) ) ) // not shadow
 				{
 					cv::Point decimalLeft;
 
@@ -361,6 +392,28 @@ bool GrayCode::Decode(
 					// search on the right image, the same row
 					for ( int cr = marker; cr < cl; cr++ )
 					{
+						if ( showImgs )
+						{
+							int off = 2;
+							int thick = 2;
+							/*cv::Mat tmpLeft = leftImg.clone();
+							cv::Point p1( cl - off, rl - off );
+							cv::Point p2( cl + off, rl + off );
+							cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
+
+							cv::imshow( leftName, tmpLeft );
+							cv::moveWindow( leftName, 0, 0 );
+*/
+							cv::Mat tmpRight = rightImg.clone();
+							cv::Point p3( cr - off, rl - off);
+							cv::Point p4( cr + off, rl + off );
+							cv::rectangle( tmpRight, p3, p4, GREEN, thick );
+
+							cv::imshow( rightName, tmpRight );
+							cv::moveWindow( rightName, 755, 0 );
+							cv::waitKey( 1 );
+						}
+
 						cv::Point decimalRight;
 						bool ok = GetProjPixel( captured[1], cr, rl, decimalRight );
 
@@ -370,7 +423,7 @@ bool GrayCode::Decode(
 						}
 
 						if ( decimalLeft == decimalRight &&
-							m_ShadowMask[1].at<uchar>( rl, cr ) == 0 /*not shadow*/ ) // is a match!
+							m_ShadowMask[1].at<uchar>( cv::Point( cr, rl ) ) /*not shadow*/ ) // is a match!
 						{
 							marker = cr;
 							m_DisparityMap.at<int>( rl, cl ) = cr - cl;

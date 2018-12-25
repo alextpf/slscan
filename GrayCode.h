@@ -100,6 +100,6 @@ private:
 	cv::Mat				m_WhiteImage;
     int                 m_BlackThresh;
     int                 m_WhiteThresh;
-    vector<cv::Mat>     m_ShadowMask; // 1: is shadow; 0: otherwise
+    vector<cv::Mat>     m_ShadowMask; // 0: is shadow; 0: otherwise
     cv::Mat             m_DisparityMap;
 }; // GrayCode
