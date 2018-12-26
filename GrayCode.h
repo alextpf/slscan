@@ -56,12 +56,13 @@ private:
     // convert Gray code to decimal
     int GrayToDec( const std::vector<uchar>& gray ) const;
 
-    //for a (x,y) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
+    //for a (r,c) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
     bool GetProjPixel(
         const vector<cv::Mat>& captured,
-        int x,
-        int y,
-        cv::Point& projPix );
+        const int r,
+		const int c,
+		int& rowDec, // out
+		int& colDec ); // out
 
     void GenerateShadowMask(
 		const vector<cv::Mat>& whiteImg,
@@ -77,15 +78,15 @@ private:
 		m_ProjectorHeight = h;
 	}
 
-	int XYToIdx( const cv::Point& p, const int h )
+	int RowColToIdx( const int r, const int c, const int w )
 	{
-		return p.x * h + p.y;
+		return r * w + c;
 	}
 
-	void IdxToXY( const int idx, cv::Point& p, const int h )
+	void IdxToRowCol( const int idx, int& row, int& col , const int w )
 	{
-		p.y = idx % h;
-		p.x = idx / h;
+		col = idx % w;
+		row = idx / w;
 	}
 
     int					m_ProjectorWidth; // projector resolution

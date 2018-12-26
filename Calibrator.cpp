@@ -138,6 +138,13 @@ void Calibrator::Generate3D()
 	cv::stereoRectify( M1, D1, M2, D2, m_ImgSiz, R, T, R1, R2, P1, P2, Q, 0,
 		-1, m_ImgSiz, &validRoi[0], &validRoi[1] );
 
+	if ( false )
+	{
+		// get mat type
+		std::string typeName = type2str( Q.type() );
+		cout << typeName.c_str() << endl; // 64FC1
+	}
+
 	cv::Mat map1x, map1y, map2x, map2y;
 	initUndistortRectifyMap( M1, D1, R1, P1, m_ImgSiz, CV_32FC1, map1x, map1y );
 	initUndistortRectifyMap( M2, D2, R2, P2, m_ImgSiz, CV_32FC1, map2x, map2y );
@@ -182,10 +189,25 @@ void Calibrator::Generate3D()
 		cv::remap( frame[0], output[0], map1x, map1y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
 		cv::remap( frame[1], output[1], map2x, map2y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
 
+		// save tmp for composite purpose
+		cv::Mat tmpLeft = output[0].clone();
+		cv::Mat tmpRight = output[1].clone();
+
+		// convert to gray scale
+		cv::cvtColor( output[0], output[0], cv::COLOR_BGRA2GRAY );
+		cv::cvtColor( output[1], output[1], cv::COLOR_BGRA2GRAY );
+
+		if ( false )
+		{
+			// get mat type
+			std::string typeName = type2str( output[0].type() );
+			cout << typeName.c_str() << endl;
+		}
+
 		left.push_back( output[0].clone() ); // left
 		right.push_back( output[1].clone() ); // right
 
-		if ( false )//no need to individually display rectified imgs
+		if ( true )//no need to individually display rectified imgs
 		{
 			DisplayFrame( m_WindowNameOutput, output );
 		}
@@ -196,34 +218,10 @@ void Calibrator::Generate3D()
 			WriteNextFrame( output );
 		}
 
-		//write a composite pair image
-		cv::Mat pair;
-		pair.create( m_ImgSiz.height, m_ImgSiz.width * 2, CV_8UC3 );
-
-		cv::Mat part = pair.colRange( 0, m_ImgSiz.width );
-
-		output[0].copyTo( part ); // left
-
-		part = pair.colRange( m_ImgSiz.width, m_ImgSiz.width * 2 );
-
-		output[1].copyTo( part ); // right
-
-		for ( int j = 0; j < m_ImgSiz.height; j += 16 )
+		if ( false )
 		{
-			cv::line( pair, cv::Point( 0, j ), cv::Point( m_ImgSiz.width * 2, j ),
-				cv::Scalar( 0, 255, 0 ) );
+			DisplayAndSaveComposite( rectifyWinName, tmpLeft/*8UC3*/, tmpRight );
 		}
-
-		cv::Mat downSize;
-		cv::resize( pair, downSize, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
-
-		cv::imshow( rectifyWinName, downSize );
-		cv::moveWindow( rectifyWinName, 0, 0 );
-
-		// save the image
-		WriteImg( "rectified", pair, m_CurrentIndex[0]-1 );
-		//================================================
-		cv::waitKey( m_Delay );
 
 		// check if we should stop
 		if ( m_ItImg[0] == m_Images[0].end() )
@@ -276,42 +274,53 @@ void Calibrator::Generate3D()
 	captured.push_back( left );
 	captured.push_back( right );
 
-	//debug
-	if ( false )
-	{
-		for ( int u = 0; u < 2; u++ )
-		{
-			for ( int m = 0; m < captured[u].size(); m++ )
-			{
-				std::stringstream ss;
-				ss << "cap-" << u << "-" << m;
-
-				cv::imshow( ss.str(), captured[u][m] );
-			}
-		}
-		cv::waitKey( 0 );
-	}
-	//==========
-
 	//restructure captured such that its size is like 2 (left & right) x NumPatternImgs x images
+	m_GrayCode.Decode( captured, white/*8UC1*/, black );
 
-	m_GrayCode.Decode( captured, white, black );
-
-	cv::Mat pointcloud;
+	vector<cv::Point3d> pointcloud;
 	cv::Mat disp = m_GrayCode.GetDisparityMap(); // CV_32S
 
-	cv::reprojectImageTo3D( disp, pointcloud, Q, true, -1 );
-
-	if ( false )
-	{
-		// get mat type
-		std::string typeName = type2str( pointcloud.type() );
-		cout << typeName.c_str() << endl;
-	}
+	ReprojectImageTo3D( disp, Q, pointcloud ); // Q is 64FC1
 
 	// export
 	Exporter::ExportToObj( pointcloud, "results.obj" );
 } // Generate3D
+
+//=======================================================================
+void Calibrator::ReprojectImageTo3D(
+	const cv::Mat& disp , // CV_32S
+	const cv::Mat& Q, // 4x4, 64FC1
+	vector<cv::Point3d>& pointcloud )
+{
+	cv::Mat tmp = cv::Mat( 4, 1, CV_64F );
+
+	for ( int r = 0; r < disp.rows; ++r )
+	{
+		for ( int c = 0; c < disp.cols; ++c )
+		{
+			if ( disp.at<int>( r, c ) == 0 )
+			{
+				continue;
+			}
+
+			tmp.at<double>( 0, 0 ) = static_cast<double>( c );
+			tmp.at<double>( 1, 0 ) = static_cast<double>( r );
+			tmp.at<double>( 2, 0 ) = static_cast<double>( disp.at<int>( r, c ) );
+			tmp.at<double>( 3, 0 ) = 1.0;
+
+			tmp = Q * tmp;
+
+			tmp /= tmp.at<double>( 3, 0 );
+
+			cv::Vec3d point;
+			point[0] = tmp.at<double>( 0, 0 );
+			point[1] = tmp.at<double>( 1, 0 );
+			point[2] = tmp.at<double>( 2, 0 );
+
+			pointcloud.push_back( point );
+		}//for c
+	}//for r
+}
 
 //=======================================================================
 void Calibrator::Scan()
@@ -879,6 +888,7 @@ void Calibrator::WriteCaliWithCirclesImg( const string& fileName, const cv::Mat&
     cv::imwrite( ss.str(), img );
 }//WriteCaliWithCirclesImg
 
+//=====================================================
 void  Calibrator::DisplayFrame( const vector<string>& winName, const vector<cv::Mat>& output )
 {
 	// display output frame
@@ -900,3 +910,43 @@ void  Calibrator::DisplayFrame( const vector<string>& winName, const vector<cv::
 		}
 	}
 } // DisplayFrame
+
+//=====================================================
+void Calibrator::DisplayAndSaveComposite(
+	const string& rectifyWinName,
+	const cv::Mat& tmpLeft,
+	const cv::Mat& tmpRight )
+{
+	//write a composite pair image
+	cv::Mat pair;
+	pair.create( m_ImgSiz.height, m_ImgSiz.width * 2, CV_8UC3 );
+
+	cv::Mat part = pair.colRange( 0, m_ImgSiz.width );
+
+	tmpLeft.copyTo( part ); // left
+
+	part = pair.colRange( m_ImgSiz.width, m_ImgSiz.width * 2 );
+
+	tmpRight.copyTo( part ); // right
+
+	for ( int j = 0; j < m_ImgSiz.height; j += 16 )
+	{
+		cv::line( pair, cv::Point( 0, j ), cv::Point( m_ImgSiz.width * 2, j ),
+			cv::Scalar( 0, 255, 0 ) );
+	}
+
+	if ( false )
+	{
+		cv::Mat downSize;
+		cv::resize( pair, downSize, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
+
+		cv::imshow( rectifyWinName, downSize );
+		cv::moveWindow( rectifyWinName, 0, 0 );
+	}
+
+	// save the image
+	WriteImg( rectifyWinName, pair, m_CurrentIndex[0] - 1 );
+	//================================================
+	cv::waitKey( m_Delay );
+
+}//DisplayAndSaveComposite

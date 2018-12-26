@@ -162,31 +162,129 @@ void GrayCode::GenerateShadowMask(
 
 	m_ImgWidth = whiteImg[0].cols;
 	m_ImgHeight = whiteImg[0].rows;
+	int shadowCount = 0;
+	int nonShadowCount = 0;
+
+	bool loadFromSaved = false;
 
     for( int k = 0; k < numSrc; k++ )
     {
-        m_ShadowMask[k] = cv::Mat( m_ImgHeight, m_ImgWidth, CV_8U );
+		m_ShadowMask[k] = cv::Mat( m_ImgHeight, m_ImgWidth, CV_8U );
 
-        for( int x = 0; x < m_ImgWidth; x++ ) // col
-        {
-            for( int y = 0; y < m_ImgHeight; y++ ) // row
-            {
-                double white = whiteImg[k].at<uchar>( cv::Point( x, y ) );
-                double black = blackImg[k].at<uchar>( cv::Point( x, y ) );
+		// build filename
+		std::stringstream ss;
+		ss << "shadowMask" << k << ".txt";
 
-                if( abs( white - black ) > m_BlackThresh )
-                {
-                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)1; // is not shadow
-                }
-                else
-                {
-                    m_ShadowMask[k].at<uchar>( cv::Point( x, y ) ) = (uchar)0; // is shadow
-                }
-            }// for y
-        }//for x
+		if( loadFromSaved )
+		{
+			std::ifstream logger;
+			logger.open( ss.str(), std::ifstream::in );
+
+			for ( int r = 0; r < m_ImgHeight; r++ ) // row
+			{
+				system( "CLS" ); // clear prompt command
+				cout << "Calculating Shadow Mask ...: ";
+				float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
+
+				cout << percentage << "%\n";
+
+				for ( int c = 0; c < m_ImgWidth; c++ ) // col
+				{
+					string line;
+					getline( logger, line );
+					int val;
+
+					stringstream stream;
+					stream.str( line );
+					stream >> val;
+					if ( val == 0 )
+					{
+						shadowCount++;
+					}
+					else
+					{
+						nonShadowCount++;
+					}
+
+					m_ShadowMask[k].at<uchar>( r, c ) = (uchar)val; // is not shadow
+				}//for c
+			}//for r
+			logger.close();
+		}
+		else
+		{
+			std::ofstream logger;
+			logger.open( ss.str(), std::ios_base::out ); // fresh file
+			//=============================================
+
+			for ( int r = 0; r < m_ImgHeight; r++ ) // row
+			{
+				system( "CLS" ); // clear prompt command
+				cout << "Calculating Shadow Mask ...: ";
+				float percentage = float( r ) / float( m_ImgHeight ) * 100.0f;
+
+				cout << percentage << "%\n";
+
+				for ( int c = 0; c < m_ImgWidth; c++ ) // col
+				{
+					int white = (int)whiteImg[k].at<uchar>( r, c );
+					int black = (int)blackImg[k].at<uchar>( r, c );
+
+					if ( abs( white - black ) > m_BlackThresh )
+					{
+						m_ShadowMask[k].at<uchar>( r, c ) = (uchar)255; // is not shadow
+						nonShadowCount++;
+						logger << 255 << endl;
+					}
+					else
+					{
+						m_ShadowMask[k].at<uchar>( r, c ) = (uchar)0; // is shadow
+						shadowCount++;
+						logger << 0 << endl;
+					}
+				}// for y
+			}//for x
+
+			logger.close();
+
+		} // if( loadFromSaved )
     }// for k
 
+	cout << "shadowCount= " << shadowCount << endl;
+	cout << "nonShadowCount= " << nonShadowCount << endl;
+
+	bool showAndSaveImg = true;
+	if ( showAndSaveImg )
+	{
+		//debug; draw it
+		cv::Mat leftImg, rightImg;
+
+		cv::resize( m_ShadowMask[0], leftImg, cv::Size(), 0.4f, 0.4f, cv::INTER_LINEAR );
+		cv::resize( m_ShadowMask[1], rightImg, cv::Size(), 0.4f, 0.4f, cv::INTER_LINEAR );
+
+		string leftMaskName = "Left Shadow Mask";
+		cv::imshow( leftMaskName, leftImg );
+		cv::moveWindow( leftMaskName, 0, 0 );
+
+		string rightMaskName = "Right Shadow Mask";
+		cv::imshow( rightMaskName, rightImg );
+		cv::moveWindow( rightMaskName, 755, 0 );
+		cv::waitKey( 1000 );
+
+		std::stringstream ss1;
+		ss1 << leftMaskName << ".jpg";
+		cv::imwrite( ss1.str(), m_ShadowMask[0] );
+
+		std::stringstream ss;
+		ss << rightMaskName << ".jpg";
+		cv::imwrite( ss.str(), m_ShadowMask[1] );
+
+		// destroy win
+		cv::destroyWindow( leftMaskName );
+		cv::destroyWindow( rightMaskName );
+	}//if ( showAndSaveImg )
 }//GenerateShadowMask
+
 
 //===========================================================================
 bool GrayCode::Decode(
@@ -196,114 +294,113 @@ bool GrayCode::Decode(
 {
     const int numSrc = static_cast<int>( captured.size() );
 
-    GenerateShadowMask( whiteImages, blackImages );
+    GenerateShadowMask( whiteImages/*8UC1*/, blackImages );
 
-	//std::map     < int /*(x * ImgHeight + y) on the captured image */, int /*(x * ProjHeight + y) decoded decimal*/ > leftCam;
-	//std::multimap< int /*(x * ProjHeight + y) decoded decimal*/,	   int /*(x * ImgHeight + y) on the captured image */ > rightCam;
+	std::map     < int /*(r * ImgWidth + c) on the captured image */, int /*(r * ProjWidth + c) decoded decimal*/ > leftCam;
+	std::multimap< int /*(r * ProjWidth + c) decoded decimal*/,	   int /*(r * ImgWidth + c) on the captured image */ > rightCam;
 
-	//bool loadFromSavedMap = false;
-	//if ( loadFromSavedMap )
-	//{
-	//	std::ifstream logLeftCam;
-	//	logLeftCam.open( "leftCamMap.txt", std::ifstream::in );
+	bool loadFromSavedMap = false;
+	if ( loadFromSavedMap )
+	{
+		std::ifstream logLeftCam;
+		logLeftCam.open( "leftCamMap.txt", std::ifstream::in );
 
-	//	std::ifstream logRightCam;
-	//	logRightCam.open( "rightCamMap.txt", std::ifstream::in );
+		std::ifstream logRightCam;
+		logRightCam.open( "rightCamMap.txt", std::ifstream::in );
 
-	//	string line;
-	//	while ( getline( logLeftCam, line ) )
-	//	{
-	//		int imgLocIdx, decimalIdx;
-	//		stringstream stream;
-	//		stream.str( line );
-	//		stream >> imgLocIdx;
-	//		stream >> decimalIdx;
+		string line;
+		while ( getline( logLeftCam, line ) )
+		{
+			int imgLocIdx, decimalIdx;
+			stringstream stream;
+			stream.str( line );
+			stream >> imgLocIdx;
+			stream >> decimalIdx;
 
-	//		leftCam.insert( std::make_pair( imgLocIdx, decimalIdx ) );
+			leftCam.insert( std::make_pair( imgLocIdx, decimalIdx ) );
 
-	//	}//while
-	//	logLeftCam.close();
+		}//while
+		logLeftCam.close();
 
-	//	while ( getline( logRightCam, line ) )
-	//	{
-	//		int imgLocIdx, decimalIdx;
-	//		stringstream stream;
-	//		stream.str( line );
-	//		stream >> decimalIdx;
-	//		stream >> imgLocIdx;
+		while ( getline( logRightCam, line ) )
+		{
+			int imgLocIdx, decimalIdx;
+			stringstream stream;
+			stream.str( line );
+			stream >> decimalIdx;
+			stream >> imgLocIdx;
 
-	//		rightCam.insert( std::make_pair( decimalIdx, imgLocIdx ) );
-	//	}//while
-	//	logRightCam.close();
-	//}
-	//else
-	//{
-	//	// logger
-	//	bool log = true;
-	//	std::ofstream logLeftCam;
-	//	logLeftCam.open( "leftCamMap.txt", std::ios_base::out ); // fresh file
-	//	logLeftCam.close();
-	//	logLeftCam.open( "leftCamMap.txt", std::ios_base::app ); // append mode
+			rightCam.insert( std::make_pair( decimalIdx, imgLocIdx ) );
+		}//while
+		logRightCam.close();
+	}
+	else
+	{
+		// logger
+		bool log = true;
+		std::ofstream logLeftCam;
+		logLeftCam.open( "leftCamMap.txt", std::ios_base::out ); // fresh file
+		logLeftCam.close();
+		logLeftCam.open( "leftCamMap.txt", std::ios_base::app ); // append mode
 
-	//	std::ofstream logRightCam;
-	//	logRightCam.open( "rightCamMap.txt", std::ios_base::out ); // fresh file
-	//	logRightCam.close();
-	//	logRightCam.open( "rightCamMap.txt", std::ios_base::app ); // append mode
-	//	//=================
+		std::ofstream logRightCam;
+		logRightCam.open( "rightCamMap.txt", std::ios_base::out ); // fresh file
+		logRightCam.close();
+		logRightCam.open( "rightCamMap.txt", std::ios_base::app ); // append mode
+		//=================
 
-	//	for ( int k = 0; k < numSrc; k++ ) // number of source (2, cameras)
-	//	{
-	//		for ( int x = 0; x < m_ImgWidth; x++ ) // col
-	//		{
-	//			for ( int y = 0; y < m_ImgHeight; y++ ) // row
-	//			{
-	//				//if the pixel is not shadowed, reconstruct
-	//				if ( m_ShadowMask[k].at<uchar>( y, x ) == 0 ) // not shadow
-	//				{
-	//					cv::Point imgLoc( x, y );
-	//					cv::Point decimal; // decoded decimal number corresponding to to a (x,y) on the image
+		for ( int k = 0; k < numSrc; k++ ) // number of source (2, cameras)
+		{
+			for ( int r = 0; r < m_ImgHeight; r++ ) // row
+			{
+				for ( int c = 0; c < m_ImgWidth; c++ ) // col
+				{
+					//if the pixel is not shadowed, reconstruct
+					if ( int( m_ShadowMask[k].at<uchar>( r, c ) ) == 255 ) // not shadow
+					{
+						int rowDec, colDec; // decoded decimal number corresponding to to a (r,c) on the image
 
-	//					//for a (x,y) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
-	//					bool ok = GetProjPixel( captured[k], x, y, decimal );
+						//for a (r,c) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
+						bool ok = GetProjPixel( captured[k], r, c, rowDec, colDec );
 
-	//					if ( !ok )
-	//					{
-	//						continue;
-	//					}
+						if ( !ok )
+						{
+							continue;
+						}
 
-	//					const int imgLocIdx = XYToIdx( imgLoc, m_ImgHeight );
-	//					const int decimalIdx = XYToIdx( decimal, m_ProjectorHeight );
+						const int imgLocIdx = RowColToIdx( r, c, m_ImgWidth );
+						const int decimalIdx = RowColToIdx( rowDec, colDec, m_ProjectorWidth );
 
-	//					if ( k == 0 )
-	//					{
-	//						// left cam
-	//						leftCam.insert( std::make_pair( imgLocIdx, decimalIdx ) );
+						if ( k == 0 )
+						{
+							// left cam
+							leftCam.insert( std::make_pair( imgLocIdx, decimalIdx ) );
 
-	//						if ( log )
-	//						{
-	//							//save the maps
-	//							logLeftCam << imgLocIdx << " " << decimalIdx << endl;
-	//						}
-	//					}
-	//					else
-	//					{
-	//						// right cam
-	//						rightCam.insert( std::make_pair( decimalIdx, imgLocIdx ) );
+							if ( log )
+							{
+								//save the maps
+								logLeftCam << imgLocIdx << " " << decimalIdx << endl;
+							}
+						}
+						else
+						{
+							// right cam
+							rightCam.insert( std::make_pair( decimalIdx, imgLocIdx ) );
 
-	//						if ( log )
-	//						{
-	//							//save the maps
-	//							logRightCam << decimalIdx << " " << imgLocIdx << endl;
-	//						}
-	//					}// if k == 0
-	//				}
-	//			} // for y
-	//		} // for x
-	//	}// for k
+							if ( log )
+							{
+								//save the maps
+								logRightCam << decimalIdx << " " << imgLocIdx << endl;
+							}
+						}// if k == 0
+					}// if m_ShadowMask
+				} // for c
+			} // for r
+		}// for k
 
-	//	logLeftCam.close();
-	//	logRightCam.close();
-	//}// if loadFromSavedMap
+		logLeftCam.close();
+		logRightCam.close();
+	}// if loadFromSavedMap
 
 	m_DisparityMap = cv::Mat::zeros( m_ImgHeight, m_ImgWidth, CV_32S );
 
@@ -312,7 +409,8 @@ bool GrayCode::Decode(
 	unsigned int numMatchedPts = 0;
 
 	//debug flat; show images
-	bool showImgs = true;
+	bool showImgs = false;
+	bool showMatched = false;
 	bool saveDisp = true;
 
 	bool loadDisp = false;
@@ -343,26 +441,44 @@ bool GrayCode::Decode(
 
 		cv::Mat leftImg; // white img
 		cv::Mat rightImg; // white img
+		float s = 0.4f;
 
-		cv::resize( whiteImages[0], leftImg, cv::Size(), 0.4f, 0.4f, cv::INTER_LINEAR );
-		cv::resize( whiteImages[1], rightImg, cv::Size(), 0.4f, 0.4f, cv::INTER_LINEAR );
+		cv::resize( whiteImages[0], leftImg, cv::Size(), s, s, cv::INTER_LINEAR );
+		cv::resize( whiteImages[1], rightImg, cv::Size(), s, s, cv::INTER_LINEAR );
 		string leftName = "Left";
 		string rightName = "Right";
 
+		std::map      < int, int>::iterator itLeft;
+		std::multimap < int, int>::iterator itRight;
+
 		unsigned int total = m_ImgHeight * m_ImgWidth;
 
+		int marker = 0; // running marker which indicate where the pix is on the right img
+		int rightLimit;
+
 		// scan line fashion to find the correspondance
-		for ( int rl = 0; rl < m_ImgHeight; rl++ ) // row, left
+		for ( int r = 0; r < m_ImgHeight; r++ ) // row
 		{
-			for ( int cl = 0; cl < m_ImgWidth; cl++ ) // col, right
+			// show percentage
+			system( "CLS" ); // clear prompt command
+			cout << "Decoding ...: ";
+			float percentage = float( r ) / float( m_ImgHeight ) * 100.0f;
+
+			cout << percentage << "%\n";
+			//===================================
+
+			for ( int c = 0; c < m_ImgWidth; c++ ) // col
 			{
+				rightLimit = c;
+
 				if ( showImgs )
 				{
 					int off = 2;
 					int thick = 2;
 					cv::Mat tmpLeft = leftImg.clone();
-					cv::Point p1( cl - off, rl - off );
-					cv::Point p2( cl + off, rl + off );
+					cv::Point p1( c * s - off, r * s - off );
+					cv::Point p2( c * s + off, r * s + off );
+					cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
 					cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
 
 					cv::imshow( leftName, tmpLeft );
@@ -370,43 +486,38 @@ bool GrayCode::Decode(
 					cv::waitKey( 1 );
 				}
 
-				unsigned int idx = rl * m_ImgWidth + cl;
+				// convert row col to idx
+				const int leftPixIdx = RowColToIdx( r, c, m_ImgWidth );
+				itLeft = leftCam.find( leftPixIdx ); // find the corresponding idx
 
-				float percentage = float( idx ) / float( total ) * 100.0f;
-
-				cout << percentage << "%\n";
-
-				//if the pixel is not shadowed, reconstruct
-				if ( m_ShadowMask[0].at<uchar>( cv::Point( cl, rl) ) ) // not shadow
+				if ( itLeft != leftCam.end() )
 				{
-					cv::Point decimalLeft;
+					int dec = itLeft->second;
+					int rightPixIdx;
 
-					//for a (x,y) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
-					bool ok = GetProjPixel( captured[0], cl, rl, decimalLeft );
+					bool ok( false );
 
-					if ( !ok )
+					if ( false )
 					{
-						continue;
+						const int count = rightCam.count( dec );
+						cout << "count= " << count << endl;
 					}
 
-					// search on the right image, the same row
-					for ( int cr = marker; cr < cl; cr++ )
+					for ( itRight = rightCam.equal_range( dec ).first; itRight != rightCam.equal_range( dec ).second; ++itRight )
 					{
+						rightPixIdx = ( *itRight ).second;
+						int row, col;
+						IdxToRowCol( rightPixIdx, row, col, m_ImgWidth );
+
 						if ( showImgs )
 						{
 							int off = 2;
 							int thick = 2;
-							/*cv::Mat tmpLeft = leftImg.clone();
-							cv::Point p1( cl - off, rl - off );
-							cv::Point p2( cl + off, rl + off );
-							cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
 
-							cv::imshow( leftName, tmpLeft );
-							cv::moveWindow( leftName, 0, 0 );
-*/
 							cv::Mat tmpRight = rightImg.clone();
-							cv::Point p3( cr - off, rl - off);
-							cv::Point p4( cr + off, rl + off );
+							cv::Point p3( col * s - off, row * s - off );
+							cv::Point p4( col * s + off, row * s + off );
+							cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
 							cv::rectangle( tmpRight, p3, p4, GREEN, thick );
 
 							cv::imshow( rightName, tmpRight );
@@ -414,88 +525,65 @@ bool GrayCode::Decode(
 							cv::waitKey( 1 );
 						}
 
-						cv::Point decimalRight;
-						bool ok = GetProjPixel( captured[1], cr, rl, decimalRight );
-
-						if ( !ok )
+						// evaluate the legit of the found pix
+						if ( row == r &&
+							 col > marker/* "continuity constraint" */ &&
+							 col < rightLimit /* "parallell constraint" */ )
 						{
-							continue;
-						}
-
-						if ( decimalLeft == decimalRight &&
-							m_ShadowMask[1].at<uchar>( cv::Point( cr, rl ) ) /*not shadow*/ ) // is a match!
-						{
-							marker = cr;
-							m_DisparityMap.at<int>( rl, cl ) = cr - cl;
-							numMatchedPts++;
-							if ( saveDisp )
+							if ( showMatched )
 							{
-								disp << rl << " " << cl << " " << cr - cl << endl;
+								int off = 2;
+								int thick = 2;
+
+								cv::Mat tmpLeft = leftImg.clone();
+								cv::Point p1( c * s - off, r * s - off );
+								cv::Point p2( c * s + off, r * s + off );
+								cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
+								cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
+
+								cv::imshow( leftName, tmpLeft );
+								cv::moveWindow( leftName, 0, 0 );
+								cv::waitKey( 1 );
+
+								cv::Mat tmpRight = rightImg.clone();
+								cv::Point p3( col * s - off, row * s - off );
+								cv::Point p4( col * s + off, row * s + off );
+								cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
+								cv::rectangle( tmpRight, p3, p4, GREEN, thick );
+
+								cv::imshow( rightName, tmpRight );
+								cv::moveWindow( rightName, 755, 0 );
+								cv::waitKey( 1 );
 							}
+
+							ok = true;
+							marker = col;
+							numMatchedPts++;
 							break;
 						}
-					}// for cr
-				} //if ( m_ShadowMask[0].at<uchar>( rl, cl ) == 0 ) // not shadow
-			}// for cl
+					}// for
+
+					if ( ok )
+					{
+						m_DisparityMap.at<int>( r, c ) = marker - c;
+
+						if ( saveDisp )
+						{
+							disp << r << " " << c << " " << marker - c << endl;
+						}
+					}
+				}// if itLeft
+
+			}// for c
 
 			marker = 0; //reset the marker
-		}// for rl
+		}// for r
 
 		disp.close();
 	} // if ( loadDisp )
 
 	cout << "mumber of matched pts: " << numMatchedPts << endl;
 
-	/*
-	std::vector<cv::Point> cam1Pixs, cam2Pixs;
-
-    for( int x = 0; x < m_ProjectorWidth; x++ )
-    {
-        for( int y = 0; y < m_ProjectorHeight; y++ )
-        {
-			cam1Pixs = camsPixels[0][ XYToIdx( x, y ) ];
-            cam2Pixs = camsPixels[1][ XYToIdx( x, y ) ];
-
-            const int cam1PixSiz = static_cast<int>( cam1Pixs.size() );
-            const int cam2PixSiz = static_cast<int>( cam2Pixs.size() );
-
-            if( cam1PixSiz == 0 || cam2PixSiz == 0 )
-            {
-                continue;
-            }
-
-            cv::Point p1;
-            cv::Point p2;
-
-            double sump1x = 0.0;
-            double sump2x = 0.0;
-
-            for( int c1 = 0; c1 < cam1PixSiz; c1++ )
-            {
-                p1 = cam1Pixs[c1];
-                sump1x += p1.x;
-            }
-
-            for( int c2 = 0; c2 < cam2PixSiz; c2++ )
-            {
-                p2 = cam2Pixs[c2];
-                sump2x += p2.x;
-            }
-
-            sump1x /= static_cast<double>( cam1PixSiz );
-            sump2x /= static_cast<double>( cam2PixSiz );
-
-            for( int c1 = 0; c1 < cam1PixSiz; c1++ )
-            {
-                p1 = cam1Pixs[c1];
-                m_DisparityMap.at<double>( p1.y, p1.x ) = sump2x - sump1x;
-            }
-
-            sump2x = 0.0; // reset
-            sump1x = 0.0;
-        } // for height
-    } // for width
-	*/
     return true;
 
 }//Decode
@@ -503,12 +591,11 @@ bool GrayCode::Decode(
 //===========================================================================
 bool GrayCode::GetProjPixel(
     const vector<cv::Mat>& captured,
-    int x, // pixel, on the image
-    int y, // pixel, on the image
-    cv::Point& projPix )
+    const int r, // pixel, on the image
+	const int c, // pixel, on the image
+    int& rowDec,
+	int& colDec )
 {
-    int xDec, yDec;
-
     std::vector<uchar> grayCol;
     std::vector<uchar> grayRow;
 
@@ -516,8 +603,8 @@ bool GrayCode::GetProjPixel(
     for( int count = 0; count < m_NumColImgs; count++ )
     {
         // get pixel intensity for regular pattern projection and its inverse
-        double val1 = captured[count * 2].at<uchar>( cv::Point( x, y ) );
-        double val2 = captured[count * 2 + 1].at<uchar>( cv::Point( x, y ) );
+		int val1 = int( captured[count * 2    ].at<uchar>( r, c ) );
+		int val2 = int( captured[count * 2 + 1].at<uchar>( r, c ) );
 
         // check if the intensity difference between the values of
         // the normal and its inverse projection image is in a valid range
@@ -538,14 +625,14 @@ bool GrayCode::GetProjPixel(
         }
     }// for m_NumColImgs
 
-    xDec = GrayToDec( grayCol );
+    colDec = GrayToDec( grayCol );
 
     // process row images
     for( int count = 0; count < m_NumRowImgs; count++ )
     {
         // get pixel intensity for regular pattern projection and its inverse
-        double val1 = captured[count * 2 + m_NumColImgs * 2].at<uchar>( cv::Point( x, y ) );
-        double val2 = captured[count * 2 + m_NumColImgs * 2 + 1].at<uchar>( cv::Point( x, y ) );
+		int val1 = int( captured[count * 2 + m_NumColImgs * 2    ].at<uchar>( r, c ) );
+		int val2 = int( captured[count * 2 + m_NumColImgs * 2 + 1].at<uchar>( r, c ) );
 
         // check if the intensity difference between the values of the normal and its inverse projection image is in a valid range
         if( abs( val1 - val2 ) < m_WhiteThresh )
@@ -565,15 +652,12 @@ bool GrayCode::GetProjPixel(
         }
     }// for m_NumRowImgs
 
-    yDec = GrayToDec( grayRow );
+	rowDec = GrayToDec( grayRow );
 
-    if( ( yDec >= m_ProjectorHeight || xDec >= m_ProjectorWidth ) )
+    if( ( rowDec >= m_ProjectorHeight || colDec >= m_ProjectorWidth ) )
     {
         return false;
     }
-
-    projPix.x = xDec;
-    projPix.y = yDec;
 
     return true;
 

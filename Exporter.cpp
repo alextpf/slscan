@@ -3,24 +3,19 @@
 #include "Exporter.h"
 
 void Exporter::ExportToObj(
-	const cv::Mat& pts,
+	const vector<cv::Point3d>& pts,
 	string path )
 {
-	const int w = pts.size().width;
-	const int h = pts.size().height;
+	const int siz = static_cast<int>( pts.size() );
 
 	std::ofstream out;
 	out.open( path.c_str() );
 
 	std::cout << "Export " << path << "...";
 
-	for ( int r = 0; r < h; r++ )
+	for ( int i = 0; i < siz; i++ )
 	{
-		for ( int c = 0; c < w; c++ )
-		{
-			cv::Point3f p = pts.at<float>( r, c );
-			out << "v " << p.x << " " << p.y << " " << p.z << "\n";
-		}
+		out << "v " << pts[i].x << " " << pts[i].y << " " << pts[i].z << "\n";
 	}
 
 	out.close();

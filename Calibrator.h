@@ -103,6 +103,15 @@ public:
 	int ReadNumPatterns();
 
 private:
+	void ReprojectImageTo3D(
+		const cv::Mat& disp /*CV_32S*/,
+		const cv::Mat& Q,
+		vector<cv::Point3d>& pointcloud );
+
+	void DisplayAndSaveComposite(
+		const string& rectifyWinName,
+		const cv::Mat& tmpLeft,
+		const cv::Mat& tempRight );
 	void WriteNumPatterns();
 
     void DisplayFrame( const vector<string>& winName, const vector<cv::Mat>& output );

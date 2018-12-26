@@ -8,19 +8,9 @@ using namespace std;
 class Exporter
 {
 public:
-	static void ExportToObj( const cv::Mat& pts, string path );
-/*
-	void SetWidth( const int w )
-	{
-		m_w = w;
-	}
-
-	void SetHeight( const int h )
-	{
-		m_h = h;
-	}*/
+	static void ExportToObj(
+		const vector<cv::Point3d>& pts,
+		string path );
 
 private:
-	/*int		m_w;
-	int		m_h;*/
 }; // Exporter
