@@ -8,7 +8,7 @@
 // -
 //========================================================
 #include <iostream>
-#include <string> // for test
+#include <string>
 #include <stdlib.h>
 #include <conio.h>
 #include <memory>
@@ -78,8 +78,8 @@ bool CaptureLeftAndRight();
 bool CalibrateLeft();
 bool CalibrateRight();
 bool CalibrateLeftAndRight();
-bool ScanOneView();
-bool Generate3DForOneView();
+bool ScanOneView( string path );
+bool Generate3DForOneView( string path );
 //======================================
 //globals
 Calibrator processor;
@@ -176,7 +176,7 @@ int main()
 
 			case MANUAL_SCAN_ONE_VIEW:
 			{
-				if ( !ScanOneView() )
+				if ( !ScanOneView( "scan_data/" ) )
 				{
 					return -1;
 				}
@@ -185,7 +185,7 @@ int main()
 
 			case GENERATE_3D_ONE_VIEW:
 			{
-				if ( !Generate3DForOneView() )
+				if ( !Generate3DForOneView("scan_data/") )
 				{
 					return -1;
 				}
@@ -208,9 +208,24 @@ int main()
 				for ( int i = 0; i < total; i += delta )
 				{
 					std::stringstream dir;
-					dir << name << i ;
+					dir << name << i << "/";
 					_mkdir( dir.str().c_str() );
-				}
+					if ( !ScanOneView( dir.str() ) )
+					{
+						return -1;
+					}//if
+				}//for i
+
+				// now generate
+				for ( int i = 0; i < total; i += delta )
+				{
+					std::stringstream dir;
+					dir << name << i << "/";
+					if ( !Generate3DForOneView( dir.str() ) )
+					{
+						return -1;
+					}
+				}//for i
 			}
 			break;
 
@@ -509,6 +524,8 @@ bool CaptureLeft()
 
 	// Start the Process
 	processor.CaptureAndClibrate();
+
+	return true;
 }//CaptureLeft
 
 //==========================
@@ -538,6 +555,7 @@ bool CaptureRight()
 
 	// Start the Process
 	processor.CaptureAndClibrate();
+	return true;
 } // CaptureRight
 
 //=====================
@@ -571,6 +589,7 @@ bool CaptureLeftAndRight()
 
 	// Start the Process
 	processor.CaptureAndClibrate();
+	return true;
 }//CaptureLeftAndRight
 
 //==============================
@@ -600,6 +619,7 @@ bool CalibrateLeft()
 
 	// Start the Process
 	processor.CaptureAndClibrate();
+	return true;
 }//CalibrateLeft
 
 //=====================
@@ -628,6 +648,7 @@ bool CalibrateRight()
 
 	// Start the Process
 	processor.CaptureAndClibrate();
+	return true;
 } // CalibrateRight
 
 //============================
@@ -663,10 +684,11 @@ bool CalibrateLeftAndRight()
 
 	// Start the Process
 	processor.CaptureAndClibrate();
+	return true;
 }//CalibrateLeftAndRight
 
 //==========================
-bool ScanOneView()
+bool ScanOneView( string path )
 {
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	//ids.push_back( LiveViewProcessor::DEFAULT_CAM );
@@ -687,8 +709,8 @@ bool ScanOneView()
 	bool ok = processor.GeneratePattern();
 
 	ok = ok && CaptureAndOrCali(
-		"scan_data/",
-		"scan_data/",
+		path,
+		path,
 		fileName,
 		fileName,
 		WEBCAM,
@@ -703,10 +725,11 @@ bool ScanOneView()
 
 	// Start the Process
 	processor.Scan();
+	return true;
 } // ScanOneView
 
 //=========================
-bool Generate3DForOneView()
+bool Generate3DForOneView( string path )
 {
 	vector<string> inputFileName;
 	inputFileName.push_back( "scan_left" );
@@ -723,12 +746,12 @@ bool Generate3DForOneView()
 	processor.SetProjectorDimension( projW, projH );
 	if ( !processor.GeneratePattern() )
 	{
-		return -1;
+		return false;
 	}
 
 	const bool ok = Calculate3DPrepare(
-		"scan_data/",
-		"scan_data/",
+		path,
+		path,
 		inputFileName,
 		outputFileName,
 		IMG,
