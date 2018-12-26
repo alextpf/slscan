@@ -173,7 +173,7 @@ void GrayCode::GenerateShadowMask(
 
 		// build filename
 		std::stringstream ss;
-		ss << "shadowMask" << k << ".txt";
+		ss << m_Path << "shadowMask" << k << ".txt";
 
 		if( loadFromSaved )
 		{
@@ -272,11 +272,11 @@ void GrayCode::GenerateShadowMask(
 		cv::waitKey( 1000 );
 
 		std::stringstream ss1;
-		ss1 << leftMaskName << ".jpg";
+		ss1 << m_Path << leftMaskName << ".jpg";
 		cv::imwrite( ss1.str(), m_ShadowMask[0] );
 
 		std::stringstream ss;
-		ss << rightMaskName << ".jpg";
+		ss << m_Path << rightMaskName << ".jpg";
 		cv::imwrite( ss.str(), m_ShadowMask[1] );
 
 		// destroy win
@@ -299,14 +299,20 @@ bool GrayCode::Decode(
 	std::map     < int /*(r * ImgWidth + c) on the captured image */, int /*(r * ProjWidth + c) decoded decimal*/ > leftCam;
 	std::multimap< int /*(r * ProjWidth + c) decoded decimal*/,	   int /*(r * ImgWidth + c) on the captured image */ > rightCam;
 
+    std::stringstream leftPath;
+    leftPath << m_Path << "leftCamMap.txt";
+
+    std::stringstream rightPath;
+    rightPath << m_Path << "rightCamMap.txt";
+
 	bool loadFromSavedMap = false;
 	if ( loadFromSavedMap )
 	{
 		std::ifstream logLeftCam;
-		logLeftCam.open( "leftCamMap.txt", std::ifstream::in );
+        logLeftCam.open( leftPath.str(), std::ifstream::in );
 
 		std::ifstream logRightCam;
-		logRightCam.open( "rightCamMap.txt", std::ifstream::in );
+		logRightCam.open( rightPath.str(), std::ifstream::in );
 
 		string line;
 		while ( getline( logLeftCam, line ) )
@@ -339,14 +345,14 @@ bool GrayCode::Decode(
 		// logger
 		bool log = true;
 		std::ofstream logLeftCam;
-		logLeftCam.open( "leftCamMap.txt", std::ios_base::out ); // fresh file
+		logLeftCam.open( leftPath.str(), std::ios_base::out ); // fresh file
 		logLeftCam.close();
-		logLeftCam.open( "leftCamMap.txt", std::ios_base::app ); // append mode
+		logLeftCam.open( leftPath.str(), std::ios_base::app ); // append mode
 
 		std::ofstream logRightCam;
-		logRightCam.open( "rightCamMap.txt", std::ios_base::out ); // fresh file
+		logRightCam.open( rightPath.str(), std::ios_base::out ); // fresh file
 		logRightCam.close();
-		logRightCam.open( "rightCamMap.txt", std::ios_base::app ); // append mode
+		logRightCam.open( rightPath.str(), std::ios_base::app ); // append mode
 		//=================
 
 		for ( int k = 0; k < numSrc; k++ ) // number of source (2, cameras)
@@ -420,10 +426,14 @@ bool GrayCode::Decode(
 	bool saveDisp = true;
 
 	bool loadDisp = false;
+
+    std::stringstream dispPath;
+    dispPath << m_Path << "Disparity.txt";
+
 	if ( loadDisp )
 	{
 		std::ifstream disparity;
-		disparity.open( "Disparity.txt", std::ifstream::in );
+		disparity.open( dispPath.str(), std::ifstream::in );
 
 		string line;
 		while ( getline( disparity, line ) )
@@ -443,7 +453,7 @@ bool GrayCode::Decode(
 	else
 	{
 		std::ofstream disp;
-		disp.open( "Disparity.txt", std::ios_base::out ); // fresh file
+		disp.open( dispPath.str(), std::ios_base::out ); // fresh file
 
 		cv::Mat leftImg; // white img
 		cv::Mat rightImg; // white img

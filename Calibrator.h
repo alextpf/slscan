@@ -52,6 +52,7 @@ public:
 	void SetPath( string s )
 	{
 		m_Path = s;
+        m_GrayCode.SetPath( s );
 	}
 
 	void WriteSingleCamCaliResults();

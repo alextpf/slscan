@@ -51,6 +51,10 @@ public:
 		return m_DisparityMap;
 	}
 
+    void SetPath( const string path )
+    {
+        m_Path = path;
+    }
 private:
 
     // convert Gray code to decimal
@@ -103,4 +107,5 @@ private:
     int                 m_WhiteThresh;
     vector<cv::Mat>     m_ShadowMask; // 0: is shadow; 0: otherwise
     cv::Mat             m_DisparityMap;
+    string              m_Path;
 }; // GrayCode

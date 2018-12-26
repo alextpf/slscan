@@ -290,8 +290,14 @@ void Calibrator::Generate3D()
 	ReprojectImageTo3D( colrImg, disp, Q, pointcloud, colors ); // Q is 64FC1
 
 	// export
-	Exporter::ExportToObj( pointcloud, "results.obj" );
-	Exporter::ExportToPly( pointcloud, colors, "results.ply" );
+
+    std::stringstream objPath;
+    objPath << m_Path << "results.obj";
+    std::stringstream plyPath;
+    plyPath << m_Path << "results.ply";
+
+	Exporter::ExportToObj( pointcloud, objPath.str() );
+	Exporter::ExportToPly( pointcloud, colors, plyPath.str() );
 } // Generate3D
 
 //=======================================================================
