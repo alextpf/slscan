@@ -14,6 +14,8 @@
 #include <memory>
 #include <fstream>      // std::ifstream
 #include <direct.h> //for mkdir
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -48,6 +50,11 @@ enum SOURCE_TYPE {
     NONE
 };
 
+enum DIR_STATUS {
+    EXISTS,
+    CANT_ACCESS,
+    NO_EXIST
+};
 //======================================
 //fwd declare
 OPERATION MainMenu();
@@ -80,6 +87,10 @@ bool CalibrateRight();
 bool CalibrateLeftAndRight();
 bool ScanOneView( string path );
 bool Generate3DForOneView( string path );
+
+// utility
+DIR_STATUS DirExists( const char *path );
+
 //======================================
 //globals
 Calibrator processor;
@@ -176,7 +187,9 @@ int main()
 
 			case MANUAL_SCAN_ONE_VIEW:
 			{
-				if ( !ScanOneView( "scan_data/" ) )
+                string path = "scan_data/";
+
+				if ( !ScanOneView( path ) )
 				{
 					return -1;
 				}
@@ -185,7 +198,9 @@ int main()
 
 			case GENERATE_3D_ONE_VIEW:
 			{
-				if ( !Generate3DForOneView("scan_data/") )
+                string path = "scan_data/";
+
+				if ( !Generate3DForOneView( path ) )
 				{
 					return -1;
 				}
@@ -501,6 +516,9 @@ bool Calculate3DPrepare(
 //===========================
 bool CaptureLeft()
 {
+    string path = "cali_data/left/";
+    _mkdir( path.c_str() );
+
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	ids.push_back( LiveViewProcessor::LEFT_CAM );
 	vector<string> title;
@@ -509,8 +527,8 @@ bool CaptureLeft()
 	fileName.push_back( "cali_left" );
 
 	const bool ok = CaptureAndOrCali(
-		"cali_data/left/",
-		"cali_data/left/",
+        path,
+        path,
 		fileName, // input name, not used
 		fileName, // output name
 		WEBCAM,
@@ -531,6 +549,9 @@ bool CaptureLeft()
 //==========================
 bool CaptureRight()
 {
+    string path = "cali_data/right/";
+    _mkdir( path.c_str() );
+
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	ids.push_back( LiveViewProcessor::RIGHT_CAM );
 	vector<string> title;
@@ -539,8 +560,8 @@ bool CaptureRight()
 	fileName.push_back( "cali_right" );
 
 	const bool ok = CaptureAndOrCali(
-		"cali_data/right/",
-		"cali_data/right/",
+        path,
+        path,
 		fileName, // input name, not used
 		fileName, // output name
 		WEBCAM,
@@ -561,6 +582,9 @@ bool CaptureRight()
 //=====================
 bool CaptureLeftAndRight()
 {
+    string path = "cali_data/leftAndRight/";
+    _mkdir( path.c_str() );
+
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	//ids.push_back( LiveViewProcessor::DEFAULT_CAM );
 	ids.push_back( LiveViewProcessor::LEFT_CAM );
@@ -574,8 +598,8 @@ bool CaptureLeftAndRight()
 	fileName.push_back( "cali_right" );
 
 	const bool ok = CaptureAndOrCali(
-		"cali_data/leftAndRight/",
-		"cali_data/leftAndRight/",
+		path,
+        path,
 		fileName, // input name, not used
 		fileName, // output name
 		WEBCAM,
@@ -595,6 +619,13 @@ bool CaptureLeftAndRight()
 //==============================
 bool CalibrateLeft()
 {
+    string path = "cali_data/left/";
+    if( DirExists( path.c_str() ) != EXISTS )
+    {
+        cout << "Need to scan left cam data first!/n";
+        return false;
+    }
+
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	ids.push_back( LiveViewProcessor::LEFT_CAM );
 	vector<string> title;
@@ -603,8 +634,8 @@ bool CalibrateLeft()
 	fileName.push_back( "cali_left" );
 
 	const bool ok = CaptureAndOrCali(
-		"cali_data/left/",
-		"cali_data/left/",
+        path,
+        path,
 		fileName, // input name
 		fileName, // output name
 		IMG,
@@ -625,6 +656,13 @@ bool CalibrateLeft()
 //=====================
 bool CalibrateRight()
 {
+    string path = "cali_data/right/";
+    if( DirExists( path.c_str() ) != EXISTS )
+    {
+        cout << "Need to scan Right cam data first!/n";
+        return false;
+    }
+
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	ids.push_back( LiveViewProcessor::RIGHT_CAM );
 	vector<string> title;
@@ -633,8 +671,8 @@ bool CalibrateRight()
 	fileName.push_back( "cali_right" );
 
 	const bool ok = CaptureAndOrCali(
-		"cali_data/right/",
-		"cali_data/right/",
+        path,
+        path,
 		fileName,
 		fileName,
 		IMG,
@@ -654,6 +692,13 @@ bool CalibrateRight()
 //============================
 bool CalibrateLeftAndRight()
 {
+    string path = "cali_data/leftAndRight/";
+    if( DirExists( path.c_str() ) != EXISTS )
+    {
+        cout << "Need to scan left+right cam data first!/n";
+        return false;
+    }
+
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	//ids.push_back( LiveViewProcessor::DEFAULT_CAM );
 	ids.push_back( LiveViewProcessor::LEFT_CAM );
@@ -668,8 +713,8 @@ bool CalibrateLeftAndRight()
 	fileName.push_back( "cali_right" );
 
 	const bool ok = CaptureAndOrCali(
-		"cali_data/leftAndRight/",
-		"cali_data/leftAndRight/",
+        path,
+        path,
 		fileName,
 		fileName,
 		IMG,
@@ -690,6 +735,9 @@ bool CalibrateLeftAndRight()
 //==========================
 bool ScanOneView( string path )
 {
+    // create dir if not already existed. If already existed, will overwrite its contents!
+    _mkdir( path.c_str() );
+
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	//ids.push_back( LiveViewProcessor::DEFAULT_CAM );
 	ids.push_back( LiveViewProcessor::LEFT_CAM );
@@ -731,6 +779,13 @@ bool ScanOneView( string path )
 //=========================
 bool Generate3DForOneView( string path )
 {
+    // check if the dir exist or not, if not, need to scan data first!
+    if( DirExists( path.c_str() ) != EXISTS )
+    {
+        cout << "Need to scan data first!/n";
+        return false;
+    }
+
 	vector<string> inputFileName;
 	inputFileName.push_back( "scan_left" );
 	inputFileName.push_back( "scan_right" );
@@ -760,3 +815,22 @@ bool Generate3DForOneView( string path )
 
 	return ok;
 }//Generate3DForOneView
+
+//======================================
+DIR_STATUS DirExists( const char *path )
+{
+    struct stat info;
+
+    if( stat( path, &info ) != 0 )
+    {
+        return CANT_ACCESS;
+    }
+    else if( info.st_mode & S_IFDIR )
+    {
+        return EXISTS;
+    }
+    else
+    {
+        return NO_EXIST;
+    }
+} // DirExists
