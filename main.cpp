@@ -8,6 +8,7 @@
 // -
 //========================================================
 #include <iostream>
+#include <string> // for test
 #include <stdlib.h>
 #include <conio.h>
 #include <memory>
@@ -94,6 +95,7 @@ float blockSize; // physical size of a chessboard block, in mm
 //========================================
 int main()
 {
+	//====================================
 	//////////////////////
 	// Read from config
 	//////////////////////
@@ -316,7 +318,9 @@ int main()
 			processor.SetProjectorDimension( projW, projH );
 			processor.SetProjWinName( "Pattern Window" );
 
-            const bool ok = CaptureAndOrCali(
+			bool ok = processor.GeneratePattern();
+
+            ok = ok && CaptureAndOrCali(
                 "scan_data/",
                 "scan_data/",
                 fileName,
@@ -325,6 +329,7 @@ int main()
                 IMG,
                 ids,
                 title );
+
             if( !ok )
             {
                 return -1;
@@ -373,32 +378,48 @@ int main()
 
         case AUTO_SCAN:
         {
-			system( "CLS" ); // clear prompt command
+			bool ok( false );
+			char name[256];
 
-			char trash[256], name[256];
-
-			std::cout << "Please enter the project name: ";
-			std::cin.getline( trash, 256 );
-			std::cin.getline( name, 256 );
-
-			int res = _mkdir( name );
-
-			bool ok( true );
-
-			if ( res != 0 )
+			while ( !ok )
 			{
-				// fail, i.e. dir existed
-				cout << "Do you want to overwrite existing data? (Y/N) \n";
-				char ans[1];
-				cin.getline( ans, 1 );
-				if ( int( ans[0] ) == 89 || int( ans[0] ) == 121 )
+				system( "CLS" ); // clear prompt command
+				std::cout << "Please enter the project name: ";
+				std::cin.getline( name, 256 );
+
+				int res = _mkdir( name );
+
+				if ( res != 0 )
+				{
+					// fail, i.e. dir existed
+					cout << "Do you want to overwrite existing data? (Y/N): ";
+					char ans[256];
+					cin.getline( ans, 256 );
+					if ( int( ans[0] ) == 89 || int( ans[0] ) == 121 )
+					{
+						ok = true;
+					}
+					else if ( int( ans[0] ) == 78 || int( ans[0] ) == 110 )
+					{
+						ok = false;
+					}
+				}
+				else
 				{
 					ok = true;
 				}
-				else if ( int( ans[0] ) == 78 || int( ans[0] ) == 110 )
-				{
-					ok = false;
-				}
+			}//while !ok
+
+			int total = 360; // degree, full circle
+			int delta = 30; // one turn
+			int steps = total / delta;
+
+			// each step capture
+			for ( int i = 0; i < steps; i += delta )
+			{
+				std::stringstream dir;
+				dir << name << "/" << i <<"/";
+
 			}
 		}
         break;
@@ -433,8 +454,10 @@ OPERATION MainMenu()
 	cout << "[11]: Exit \n\n";
 	cout << "Answer: ";
 
-	int c;
-	std::cin >> c;
+	char name[256];
+
+	std::cin.getline( name, 256 );
+	int c = atoi( name );
 
 	return static_cast<OPERATION>( c );
 

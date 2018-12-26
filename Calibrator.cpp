@@ -324,7 +324,7 @@ void Calibrator::ReprojectImageTo3D(
 
 			cv::Vec3d point;
 			point[0] = tmp.at<double>( 0, 0 );
-			point[1] = tmp.at<double>( 1, 0 );
+			point[1] = -tmp.at<double>( 1, 0 ); // flip y
 			point[2] = tmp.at<double>( 2, 0 );
 
 			pointcloud.push_back( point );
@@ -340,11 +340,6 @@ void Calibrator::ReprojectImageTo3D(
 //=======================================================================
 void Calibrator::Scan()
 {
-	if ( !m_GrayCode.GeneratePattern() )
-	{
-		return;
-	}
-
 	// Setting pattern window on second monitor (the projector's one)
 	cv::namedWindow( m_ProjWinName, cv::WINDOW_NORMAL );
 	cv::resizeWindow( m_ProjWinName, m_GrayCode.GetWidth(), m_GrayCode.GetHeight() );
