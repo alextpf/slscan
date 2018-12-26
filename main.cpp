@@ -3,6 +3,7 @@
 #include <conio.h>
 #include <memory>
 #include <fstream>      // std::ifstream
+#include <direct.h> //for mkdir
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -358,7 +359,27 @@ int main()
 		break;
 
         case AUTO_SCAN:
-        {}
+        {
+			system( "CLS" ); // clear prompt command
+
+			char trash[256],name[256];
+
+			std::cout << "Please enter the project name: ";
+			std::cin.getline( trash, 256 );
+			std::cin.getline( name, 256 );
+
+			int res = _mkdir( name );
+
+			if ( res == 0 )
+			{
+				// success
+			}
+			else
+			{
+				// fail
+				cout << "fail creating dir\n";
+			}
+		}
         break;
 
         default:
