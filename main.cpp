@@ -1,3 +1,12 @@
+//========================================================
+// Alex Chen, 2018
+// alextpf@gmail.com
+//
+// note:
+// - object has to be located at ~ from the projector (mine is a VANKYO Leisure 510 )
+// - the extented screen (for the projector) has to be set at the resolution of 1280 x 768, with no scaling
+// -
+//========================================================
 #include <iostream>
 #include <stdlib.h>
 #include <conio.h>
@@ -342,6 +351,10 @@ int main()
 			title.push_back( "Right Cam" );
 
 			processor.SetProjectorDimension( projW, projH );
+			if ( !processor.GeneratePattern() )
+			{
+				return -1;
+			}
 
 			const bool ok = Calculate3DPrepare(
 				"scan_data/",
@@ -362,7 +375,7 @@ int main()
         {
 			system( "CLS" ); // clear prompt command
 
-			char trash[256],name[256];
+			char trash[256], name[256];
 
 			std::cout << "Please enter the project name: ";
 			std::cin.getline( trash, 256 );
@@ -370,14 +383,22 @@ int main()
 
 			int res = _mkdir( name );
 
-			if ( res == 0 )
+			bool ok( true );
+
+			if ( res != 0 )
 			{
-				// success
-			}
-			else
-			{
-				// fail
-				cout << "fail creating dir\n";
+				// fail, i.e. dir existed
+				cout << "Do you want to overwrite existing data? (Y/N) \n";
+				char ans[1];
+				cin.getline( ans, 1 );
+				if ( int( ans[0] ) == 89 || int( ans[0] ) == 121 )
+				{
+					ok = true;
+				}
+				else if ( int( ans[0] ) == 78 || int( ans[0] ) == 110 )
+				{
+					ok = false;
+				}
 			}
 		}
         break;

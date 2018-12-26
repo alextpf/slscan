@@ -102,6 +102,10 @@ public:
 
 	int ReadNumPatterns();
 
+	bool GeneratePattern()
+	{
+		return m_GrayCode.GeneratePattern();
+	}
 private:
 	void ReprojectImageTo3D(
 		const cv::Mat& colorImg,

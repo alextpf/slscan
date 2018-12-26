@@ -108,11 +108,6 @@ void Calibrator::CaptureAndClibrate()
 //=======================================================================
 void Calibrator::Generate3D()
 {
-	if ( !m_GrayCode.GeneratePattern() )
-	{
-		return;
-	}
-
 	// read calibration result of each camera
 	string leftPath = "cali_data/left/";
 	string rightPath = "cali_data/right/";
