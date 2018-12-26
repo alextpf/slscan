@@ -3,9 +3,9 @@
 // alextpf@gmail.com
 //
 // note:
-// - object has to be located at ~ from the projector (mine is a VANKYO Leisure 510 )
+// - object has to be located at ~ m from the projector (mine is a VANKYO Leisure 510 )
 // - the extented screen (for the projector) has to be set at the resolution of 1280 x 768, with no scaling
-// -
+// - the scanner has a depth of XX m, and width, height of XX m
 //========================================================
 #include <iostream>
 #include <string>
