@@ -72,6 +72,14 @@ bool Calculate3DPrepare(
 	SOURCE_TYPE outType,
 	vector<string> title );
 
+bool CaptureLeft();
+bool CaptureRight();
+bool CaptureLeftAndRight();
+bool CalibrateLeft();
+bool CalibrateRight();
+bool CalibrateLeftAndRight();
+bool ScanOneView();
+bool Generate3DForOneView();
 //======================================
 //globals
 Calibrator processor;
@@ -114,320 +122,100 @@ int main()
 
             case CAPTURE_CALI_LEFT:
 			{
-				// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
-                vector<LiveViewProcessor::WEB_CAM_ID> ids;
-                ids.push_back( LiveViewProcessor::LEFT_CAM );
-                vector<string> title;
-                title.push_back( "Left Cam" );
-                vector<string> fileName;
-                fileName.push_back( "cali_left" );
-
-                const bool ok = CaptureAndOrCali(
-                    "cali_data/left/",
-                    "cali_data/left/",
-                    fileName, // input name, not used
-					fileName, // output name
-                    WEBCAM,
-                    IMG,
-                    ids,
-					title );
-				if ( !ok )
+				if ( !CaptureLeft() )
 				{
 					return -1;
 				}
-
-				// Start the Process
-				processor.CaptureAndClibrate();
-
             }//case CAPTURE_CALI_LEFT:
             break;
 
-        case CAPTURE_CALI_RIGHT:
-        {
-			// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
-            vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            ids.push_back( LiveViewProcessor::RIGHT_CAM );
-            vector<string> title;
-            title.push_back( "Right Cam" );
-            vector<string> fileName;
-            fileName.push_back( "cali_right" );
-
-			const bool ok = CaptureAndOrCali(
-				"cali_data/right/",
-				"cali_data/right/",
-				fileName, // input name, not used
-				fileName, // output name
-				WEBCAM,
-				IMG,
-				ids,
-				title );
-			if ( !ok )
+			case CAPTURE_CALI_RIGHT:
 			{
-				return -1;
+				if ( !CaptureRight() )
+				{
+					return -1;
+				}
 			}
+			break;
 
-			// Start the Process
-			processor.CaptureAndClibrate();
-
-		}
-        break;
-
-        case CAPTURE_CALI_LEFT_AND_RIGHT:
-        {
-            // hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
-            vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            //ids.push_back( LiveViewProcessor::DEFAULT_CAM );
-            ids.push_back( LiveViewProcessor::LEFT_CAM );
-            ids.push_back( LiveViewProcessor::RIGHT_CAM );
-
-            vector<string> title;
-            title.push_back( "Left Cam" );
-            title.push_back( "Right Cam" );
-            vector<string> fileName;
-            fileName.push_back( "cali_left" );
-            fileName.push_back( "cali_right" );
-
-            const bool ok = CaptureAndOrCali(
-                "cali_data/leftAndRight/",
-                "cali_data/leftAndRight/",
-				fileName, // input name, not used
-				fileName, // output name
-                WEBCAM,
-                IMG,
-                ids,
-                title );
-            if( !ok )
-            {
-                return -1;
-            }
-
-			// Start the Process
-			processor.CaptureAndClibrate();
-
-        }
-        break;
-
-        case CALIBRATE_LEFT:
-        {
-            vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            ids.push_back( LiveViewProcessor::LEFT_CAM );
-            vector<string> title;
-            title.push_back( "Left Cam" );
-            vector<string> fileName;
-            fileName.push_back( "cali_left" );
-
-			const bool ok = CaptureAndOrCali(
-				"cali_data/left/",
-				"cali_data/left/",
-				fileName, // input name
-				fileName, // output name
-				IMG,
-				IMG,
-				ids,
-				title );
-			if ( !ok )
+			case CAPTURE_CALI_LEFT_AND_RIGHT:
 			{
-				return -1;
+				if ( !CaptureLeftAndRight() )
+				{
+					return -1;
+				}
 			}
+			break;
 
-			// Start the Process
-			processor.CaptureAndClibrate();
-
-		}
-        break;
-
-        case CALIBRATE_RIGHT:
-        {
-            vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            ids.push_back( LiveViewProcessor::RIGHT_CAM );
-            vector<string> title;
-            title.push_back( "Right Cam" );
-            vector<string> fileName;
-            fileName.push_back( "cali_right" );
-
-			const bool ok = CaptureAndOrCali(
-				"cali_data/right/",
-				"cali_data/right/",
-                fileName,
-				fileName,
-				IMG,
-				IMG,
-				ids,
-				title );
-			if ( !ok )
+			case CALIBRATE_LEFT:
 			{
-				return -1;
+				if ( !CalibrateLeft() )
+				{
+					return -1;
+				}
 			}
+			break;
 
-			// Start the Process
-			processor.CaptureAndClibrate();
-
-		}
-        break;
-
-        case CALIBRATE_LEFT_AND_RIGHT:
-        {
-            vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            //ids.push_back( LiveViewProcessor::DEFAULT_CAM );
-            ids.push_back( LiveViewProcessor::LEFT_CAM );
-            ids.push_back( LiveViewProcessor::RIGHT_CAM );
-
-            vector<string> title;
-            title.push_back( "Left Cam" );
-            title.push_back( "Right Cam" );
-
-            vector<string> fileName;
-            fileName.push_back( "cali_left" );
-            fileName.push_back( "cali_right" );
-
-            const bool ok = CaptureAndOrCali(
-                "cali_data/leftAndRight/",
-                "cali_data/leftAndRight/",
-                fileName,
-				fileName,
-                IMG,
-                IMG,
-                ids,
-                title );
-            if( !ok )
-            {
-                return -1;
-            }
-
-			// Start the Process
-			processor.CaptureAndClibrate();
-
-        }
-        break;
-
-        case MANUAL_SCAN_ONE_VIEW:
-        {
-            vector<LiveViewProcessor::WEB_CAM_ID> ids;
-            //ids.push_back( LiveViewProcessor::DEFAULT_CAM );
-            ids.push_back( LiveViewProcessor::LEFT_CAM );
-            ids.push_back( LiveViewProcessor::RIGHT_CAM );
-
-            vector<string> title;
-            title.push_back( "Left Cam" );
-            title.push_back( "Right Cam" );
-
-            vector<string> fileName;
-            fileName.push_back( "scan_left" );
-            fileName.push_back( "scan_right" );
-
-			processor.SetProjectorDimension( projW, projH );
-			processor.SetProjWinName( "Pattern Window" );
-
-			bool ok = processor.GeneratePattern();
-
-            ok = ok && CaptureAndOrCali(
-                "scan_data/",
-                "scan_data/",
-                fileName,
-				fileName,
-                WEBCAM,
-                IMG,
-                ids,
-                title );
-
-            if( !ok )
-            {
-                return -1;
-            }
-
-			// Start the Process
-			processor.Scan();
-
-        }
-        break;
-
-		case GENERATE_3D_ONE_VIEW:
-		{
-			vector<string> inputFileName;
-			inputFileName.push_back( "scan_left" );
-			inputFileName.push_back( "scan_right" );
-
-			vector<string> outputFileName;
-			outputFileName.push_back( "scan_left_rectified" );
-			outputFileName.push_back( "scan_right_rectified" );
-
-			vector<string> title;
-			title.push_back( "Left Cam" );
-			title.push_back( "Right Cam" );
-
-			processor.SetProjectorDimension( projW, projH );
-			if ( !processor.GeneratePattern() )
+			case CALIBRATE_RIGHT:
 			{
-				return -1;
+				if ( !CalibrateRight() )
+				{
+					return -1;
+				}
 			}
+			break;
 
-			const bool ok = Calculate3DPrepare(
-				"scan_data/",
-				"scan_data/",
-				inputFileName,
-				outputFileName,
-				IMG,
-				NONE,
-				title );
-			if ( !ok )
+			case CALIBRATE_LEFT_AND_RIGHT:
 			{
-				return -1;
+				if ( !CalibrateLeftAndRight() )
+				{
+					return -1;
+				}
 			}
-		}
-		break;
+			break;
 
-        case AUTO_SCAN:
-        {
-			bool ok( false );
-			char name[256];
-
-			while ( !ok )
+			case MANUAL_SCAN_ONE_VIEW:
 			{
+				if ( !ScanOneView() )
+				{
+					return -1;
+				}
+			}
+			break;
+
+			case GENERATE_3D_ONE_VIEW:
+			{
+				if ( !Generate3DForOneView() )
+				{
+					return -1;
+				}
+			}
+			break;
+
+			case AUTO_SCAN:
+			{
+				char name[256];
+
 				system( "CLS" ); // clear prompt command
 				std::cout << "Please enter the project name: ";
 				std::cin.getline( name, 256 );
 
-				int res = _mkdir( name );
+				int total = 360; // degree, full circle
+				int delta = 30; // one turn
+				int steps = total / delta;
 
-				if ( res != 0 )
+				// each step capture
+				for ( int i = 0; i < total; i += delta )
 				{
-					// fail, i.e. dir existed
-					cout << "Do you want to overwrite existing data? (Y/N): ";
-					char ans[256];
-					cin.getline( ans, 256 );
-					if ( int( ans[0] ) == 89 || int( ans[0] ) == 121 )
-					{
-						ok = true;
-					}
-					else if ( int( ans[0] ) == 78 || int( ans[0] ) == 110 )
-					{
-						ok = false;
-					}
+					std::stringstream dir;
+					dir << name << i ;
+					_mkdir( dir.str().c_str() );
 				}
-				else
-				{
-					ok = true;
-				}
-			}//while !ok
-
-			int total = 360; // degree, full circle
-			int delta = 30; // one turn
-			int steps = total / delta;
-
-			// each step capture
-			for ( int i = 0; i < steps; i += delta )
-			{
-				std::stringstream dir;
-				dir << name << "/" << i <<"/";
-
 			}
-		}
-        break;
+			break;
 
-        default:
-            break;
-
-
+			default:
+				break;
         }// switch
 
 	} // while ( op != EXIT )
@@ -694,3 +482,258 @@ bool Calculate3DPrepare(
 
 	return true;
 }//Calculate3DPrepare
+
+//===========================
+bool CaptureLeft()
+{
+	vector<LiveViewProcessor::WEB_CAM_ID> ids;
+	ids.push_back( LiveViewProcessor::LEFT_CAM );
+	vector<string> title;
+	title.push_back( "Left Cam" );
+	vector<string> fileName;
+	fileName.push_back( "cali_left" );
+
+	const bool ok = CaptureAndOrCali(
+		"cali_data/left/",
+		"cali_data/left/",
+		fileName, // input name, not used
+		fileName, // output name
+		WEBCAM,
+		IMG,
+		ids,
+		title );
+	if ( !ok )
+	{
+		return false;
+	}
+
+	// Start the Process
+	processor.CaptureAndClibrate();
+}//CaptureLeft
+
+//==========================
+bool CaptureRight()
+{
+	vector<LiveViewProcessor::WEB_CAM_ID> ids;
+	ids.push_back( LiveViewProcessor::RIGHT_CAM );
+	vector<string> title;
+	title.push_back( "Right Cam" );
+	vector<string> fileName;
+	fileName.push_back( "cali_right" );
+
+	const bool ok = CaptureAndOrCali(
+		"cali_data/right/",
+		"cali_data/right/",
+		fileName, // input name, not used
+		fileName, // output name
+		WEBCAM,
+		IMG,
+		ids,
+		title );
+
+	if ( !ok )
+	{
+		return false;
+	}
+
+	// Start the Process
+	processor.CaptureAndClibrate();
+} // CaptureRight
+
+//=====================
+bool CaptureLeftAndRight()
+{
+	vector<LiveViewProcessor::WEB_CAM_ID> ids;
+	//ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+	ids.push_back( LiveViewProcessor::LEFT_CAM );
+	ids.push_back( LiveViewProcessor::RIGHT_CAM );
+
+	vector<string> title;
+	title.push_back( "Left Cam" );
+	title.push_back( "Right Cam" );
+	vector<string> fileName;
+	fileName.push_back( "cali_left" );
+	fileName.push_back( "cali_right" );
+
+	const bool ok = CaptureAndOrCali(
+		"cali_data/leftAndRight/",
+		"cali_data/leftAndRight/",
+		fileName, // input name, not used
+		fileName, // output name
+		WEBCAM,
+		IMG,
+		ids,
+		title );
+	if ( !ok )
+	{
+		return false;
+	}
+
+	// Start the Process
+	processor.CaptureAndClibrate();
+}//CaptureLeftAndRight
+
+//==============================
+bool CalibrateLeft()
+{
+	vector<LiveViewProcessor::WEB_CAM_ID> ids;
+	ids.push_back( LiveViewProcessor::LEFT_CAM );
+	vector<string> title;
+	title.push_back( "Left Cam" );
+	vector<string> fileName;
+	fileName.push_back( "cali_left" );
+
+	const bool ok = CaptureAndOrCali(
+		"cali_data/left/",
+		"cali_data/left/",
+		fileName, // input name
+		fileName, // output name
+		IMG,
+		IMG,
+		ids,
+		title );
+
+	if ( !ok )
+	{
+		return false;
+	}
+
+	// Start the Process
+	processor.CaptureAndClibrate();
+}//CalibrateLeft
+
+//=====================
+bool CalibrateRight()
+{
+	vector<LiveViewProcessor::WEB_CAM_ID> ids;
+	ids.push_back( LiveViewProcessor::RIGHT_CAM );
+	vector<string> title;
+	title.push_back( "Right Cam" );
+	vector<string> fileName;
+	fileName.push_back( "cali_right" );
+
+	const bool ok = CaptureAndOrCali(
+		"cali_data/right/",
+		"cali_data/right/",
+		fileName,
+		fileName,
+		IMG,
+		IMG,
+		ids,
+		title );
+	if ( !ok )
+	{
+		return false;
+	}
+
+	// Start the Process
+	processor.CaptureAndClibrate();
+} // CalibrateRight
+
+//============================
+bool CalibrateLeftAndRight()
+{
+	vector<LiveViewProcessor::WEB_CAM_ID> ids;
+	//ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+	ids.push_back( LiveViewProcessor::LEFT_CAM );
+	ids.push_back( LiveViewProcessor::RIGHT_CAM );
+
+	vector<string> title;
+	title.push_back( "Left Cam" );
+	title.push_back( "Right Cam" );
+
+	vector<string> fileName;
+	fileName.push_back( "cali_left" );
+	fileName.push_back( "cali_right" );
+
+	const bool ok = CaptureAndOrCali(
+		"cali_data/leftAndRight/",
+		"cali_data/leftAndRight/",
+		fileName,
+		fileName,
+		IMG,
+		IMG,
+		ids,
+		title );
+
+	if ( !ok )
+	{
+		return false;
+	}
+
+	// Start the Process
+	processor.CaptureAndClibrate();
+}//CalibrateLeftAndRight
+
+//==========================
+bool ScanOneView()
+{
+	vector<LiveViewProcessor::WEB_CAM_ID> ids;
+	//ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+	ids.push_back( LiveViewProcessor::LEFT_CAM );
+	ids.push_back( LiveViewProcessor::RIGHT_CAM );
+
+	vector<string> title;
+	title.push_back( "Left Cam" );
+	title.push_back( "Right Cam" );
+
+	vector<string> fileName;
+	fileName.push_back( "scan_left" );
+	fileName.push_back( "scan_right" );
+
+	processor.SetProjectorDimension( projW, projH );
+	processor.SetProjWinName( "Pattern Window" );
+
+	bool ok = processor.GeneratePattern();
+
+	ok = ok && CaptureAndOrCali(
+		"scan_data/",
+		"scan_data/",
+		fileName,
+		fileName,
+		WEBCAM,
+		IMG,
+		ids,
+		title );
+
+	if ( !ok )
+	{
+		return false;
+	}
+
+	// Start the Process
+	processor.Scan();
+} // ScanOneView
+
+//=========================
+bool Generate3DForOneView()
+{
+	vector<string> inputFileName;
+	inputFileName.push_back( "scan_left" );
+	inputFileName.push_back( "scan_right" );
+
+	vector<string> outputFileName;
+	outputFileName.push_back( "scan_left_rectified" );
+	outputFileName.push_back( "scan_right_rectified" );
+
+	vector<string> title;
+	title.push_back( "Left Cam" );
+	title.push_back( "Right Cam" );
+
+	processor.SetProjectorDimension( projW, projH );
+	if ( !processor.GeneratePattern() )
+	{
+		return -1;
+	}
+
+	const bool ok = Calculate3DPrepare(
+		"scan_data/",
+		"scan_data/",
+		inputFileName,
+		outputFileName,
+		IMG,
+		NONE,
+		title );
+
+	return ok;
+}//Generate3DForOneView
