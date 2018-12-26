@@ -104,9 +104,11 @@ public:
 
 private:
 	void ReprojectImageTo3D(
+		const cv::Mat& colorImg,
 		const cv::Mat& disp /*CV_32S*/,
 		const cv::Mat& Q,
-		vector<cv::Point3d>& pointcloud );
+		vector<cv::Point3d>& pointcloud,
+		vector<cv::Point3i>& colors );
 
 	void DisplayAndSaveComposite(
 		const string& rectifyWinName,

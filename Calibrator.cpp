@@ -171,6 +171,9 @@ void Calibrator::Generate3D()
 	vector<cv::Mat> right;
 	string rectifyWinName = "Rectified";
 
+	cv::Mat colrImg;
+	int counter = 0;
+
 	while ( !IsStopped() )
 	{
 		// read next frame if any
@@ -188,6 +191,12 @@ void Calibrator::Generate3D()
 		// rectify images
 		cv::remap( frame[0], output[0], map1x, map1y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
 		cv::remap( frame[1], output[1], map2x, map2y, cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar() );
+
+		if ( counter == m_GrayCode.GetNumPatternImgs() )
+		{
+			//save the "white" image
+			colrImg = output[0].clone(); // 8UC3
+		}
 
 		// save tmp for composite purpose
 		cv::Mat tmpLeft = output[0].clone();
@@ -228,6 +237,8 @@ void Calibrator::Generate3D()
 		{
 			StopIt();
 		}
+
+		counter++;
 	} // while ( !IsStopped() )
 
 	// after all the images are processed
@@ -278,19 +289,23 @@ void Calibrator::Generate3D()
 	m_GrayCode.Decode( captured, white/*8UC1*/, black );
 
 	vector<cv::Point3d> pointcloud;
+	vector<cv::Point3i> colors;
 	cv::Mat disp = m_GrayCode.GetDisparityMap(); // CV_32S
 
-	ReprojectImageTo3D( disp, Q, pointcloud ); // Q is 64FC1
+	ReprojectImageTo3D( colrImg, disp, Q, pointcloud, colors ); // Q is 64FC1
 
 	// export
 	Exporter::ExportToObj( pointcloud, "results.obj" );
+	Exporter::ExportToPly( pointcloud, colors, "results.ply" );
 } // Generate3D
 
 //=======================================================================
 void Calibrator::ReprojectImageTo3D(
+	const cv::Mat& colorImg,
 	const cv::Mat& disp , // CV_32S
 	const cv::Mat& Q, // 4x4, 64FC1
-	vector<cv::Point3d>& pointcloud )
+	vector<cv::Point3d>& pointcloud,
+	vector<cv::Point3i>& colors )
 {
 	cv::Mat tmp = cv::Mat( 4, 1, CV_64F );
 
@@ -318,9 +333,14 @@ void Calibrator::ReprojectImageTo3D(
 			point[2] = tmp.at<double>( 2, 0 );
 
 			pointcloud.push_back( point );
+			cv::Point3i color;
+			color.x = int( colorImg.at<cv::Vec3b>( r, c )[2] );//r
+			color.y = int( colorImg.at<cv::Vec3b>( r, c )[1] );//g
+			color.z = int( colorImg.at<cv::Vec3b>( r, c )[0] );//b
+			colors.push_back( color );
 		}//for c
 	}//for r
-}
+}//ReprojectImageTo3D
 
 //=======================================================================
 void Calibrator::Scan()

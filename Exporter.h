@@ -12,5 +12,9 @@ public:
 		const vector<cv::Point3d>& pts,
 		string path );
 
+	static void ExportToPly(
+		const vector<cv::Point3d>& pts,
+		const vector<cv::Point3i>& color,
+		string path );
 private:
 }; // Exporter

@@ -221,7 +221,7 @@ void GrayCode::GenerateShadowMask(
 			{
 				system( "CLS" ); // clear prompt command
 				cout << "Calculating Shadow Mask ...: ";
-				float percentage = float( r ) / float( m_ImgHeight ) * 100.0f;
+				float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
 				cout << percentage << "%\n";
 
@@ -353,6 +353,12 @@ bool GrayCode::Decode(
 		{
 			for ( int r = 0; r < m_ImgHeight; r++ ) // row
 			{
+				system( "CLS" ); // clear prompt command
+				cout << "Creating Maps ...: ";
+				float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
+
+				cout << percentage << "%\n";
+
 				for ( int c = 0; c < m_ImgWidth; c++ ) // col
 				{
 					//if the pixel is not shadowed, reconstruct
