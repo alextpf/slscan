@@ -29,31 +29,19 @@ void setup()
   // Enable Motors
   digitalWrite(X_ENABLE_PIN    , LOW);
 
-#ifdef TWO_MOTOR
-  digitalWrite(Y_ENABLE_PIN    , LOW);
-#else
-  digitalWrite(Y_LEFT_ENABLE_PIN    , LOW);
-  digitalWrite(Y_RIGHT_ENABLE_PIN    , LOW);
-#endif
-
   SetTimerInterrupt();
 
   // init TurnTable params
-  RobotPos initPos( ROBOT_INITIAL_POSITION_X, ROBOT_INITIAL_POSITION_Y ); // mm
-  TurnTable.SetTablePos( initPos );
+  TurnTable.SetTablePos( 0 );
 
   #ifdef SHOW_LOG
       // log
       Serial.println("AidenBot init:");
-      Serial.print("Init pos: x = ");
-      Serial.print(ROBOT_INITIAL_POSITION_X);
-      Serial.print(", y = ");
-      Serial.println(ROBOT_INITIAL_POSITION_Y);
+      Serial.println("Init pos: x = 0");
       //=============================================
   #endif
 
-  long m1s, m2s;
-  TurnTable::TurnTablePosToMotorStep(initPos, m1s, m2s);
+  long ms = TurnTable::TurnTablePosToMotorStep(0);
 
   #ifdef SHOW_LOG
       // log
@@ -64,16 +52,12 @@ void setup()
       //=============================================
   #endif
 
-  TurnTable.GetM1().SetCurrStep( m1s ); // this sets m_CurrStep for Motor1 & Motor2
-  TurnTable.GetM2().SetCurrStep( m2s );
+  TurnTable.GetMotor().SetCurrStep( ms ); // this sets m_CurrStep for Motor1 & Motor2
 
-  TurnTable.  int GetMaxAbsAccel()
-SetMaxAbsSpeed( MAX_X_ABS_SPEED );
-  TurnTable.SetYMaxAbsSpeed( MAX_Y_ABS_SPEED );
-  TurnTable.SetMaxAbsAccel( MAX_X_ABS_ACCEL );
-  TurnTable.SetYMaxAbsAccel( MAX_Y_ABS_ACCEL );
+  TurnTable.SetMaxAbsSpeed( MAX_ABS_SPEED );
+  TurnTable.SetMaxAbsAccel( MAX_ABS_ACCEL );
 
-  TurnTable.SetPosStraight( ROBOT_CENTER_X, ROBOT_INITIAL_POSITION_Y ); // this sets m_GoalStep, and internally set m_AbsGoalSpeed for M1 & M2
+  TurnTable.SetPosStraight( 0 );
 
   prev_time = micros();
   TurnTable.SetTime( prev_time );
@@ -97,46 +81,16 @@ void loop()
     {
     #ifdef SHOW_LOG
       //reader.showNewData();
-      Serial.print( reader.GetDesiredBotPos().m_X );
+      Serial.print( reader.GetDesiredTablePos().m_X );
       Serial.print(' ');
-      Serial.print( reader.GetDesiredBotPos().m_Y );
-      Serial.print(' ');
-
-      Serial.print( reader.GetDetectedBotPos().m_X );
-      Serial.print(' ');
-      Serial.print( reader.GetDetectedBotPos().m_Y );
+      Serial.print( reader.GetDesiredTablePos().m_Y );
       Serial.print(' ');
 
-      Serial.print( reader.GetDesiredYMotorSpeed() );
-      Serial.println();
     #endif
 
-      const RobotPos detectedBotPos = reader.GetDetectedBotPos();
-
-      // if we do missing step correction, don't SetPosStraight
-      if( detectedBotPos.m_X >= 0 && detectedBotPos.m_Y >= 0 )
       {
-        long m1s, m2s;
-        TurnTable::TurnTablePosToMotorStep(detectedBotPos, m1s, m2s);
-
-  #ifdef SHOW_LOG
-        // log
-        Serial.print("missing step correction: Motor1 step = ");
-        Serial.print( m1s );
-        Serial.print(", Motor2 step = ");
-        Serial.println( m2s ); Serial.println("");
-        //=============================================
-  #endif
-        // TurnTable.SetTablePos( detectedBotPos ); // this is not needed becuase Robot pos is later overwrite in Update(), by converting motor steps to robot pos
-        TurnTable.GetM1().SetCurrStep( m1s ); // this sets m_CurrStep for Motor1 & Motor2
-        TurnTable.GetM2().SetCurrStep( m2s );
-      }
-      else
-      {
-        TurnTable.  int GetMaxAbsAccel()
-SetMaxAbsSpeed( reader.GetDesiredXMotorSpeed() );
-        TurnTable.SetYMaxAbsSpeed( reader.GetDesiredYMotorSpeed() );
-        TurnTable.SetPosStraight( reader.GetDesiredBotPos().m_X, reader.GetDesiredBotPos().m_Y );
+        TurnTable.SetMaxAbsSpeed( reader.GetDesiredMotorSpeed() );
+        TurnTable.SetPosStraight( reader.GetDesiredTablePos() );
       }
     }
 

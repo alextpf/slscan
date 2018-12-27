@@ -10,7 +10,6 @@
 class Motor
 {
 public:
-  enum MOTOR_NUM {M1,M2};
   
   Motor();
   ~Motor();
@@ -101,10 +100,10 @@ public:
   }
   
   void UpdateAccel();
-  void UpdateSpeed( uint16_t dt, MOTOR_NUM m );
+  void UpdateSpeed( uint16_t dt );
   
 private:  
-  void SetCurrSpeedInternal( uint16_t dt, int goalSpeed, MOTOR_NUM m );
+  void SetCurrSpeedInternal( uint16_t dt, int goalSpeed );
 
   //////////////
   // Position

@@ -53,7 +53,7 @@ void Motor::UpdateAccel()
 } // UpdateAccel
 
 //=========================================================
-void Motor::UpdateSpeed( uint16_t dt, MOTOR_NUM m )
+void Motor::UpdateSpeed( uint16_t dt )
 {
   const int tmp = sign( m_CurrSpeed ) * ( (long)m_CurrSpeed * (long)m_CurrSpeed / ( STOP_COEF * (long)m_AbsAccel ) );
   const long stepsToGoal = m_GoalStep - m_CurrStep; // error term
@@ -152,20 +152,13 @@ void Motor::UpdateSpeed( uint16_t dt, MOTOR_NUM m )
         Serial.println( m_AbsGoalSpeed );
   #endif
   
-  SetCurrSpeedInternal( dt, goalSpeed, m );
+  SetCurrSpeedInternal( dt, goalSpeed );
 } // UpdateSpeed
 
 //=========================================================
-void Motor::SetCurrSpeedInternal( uint16_t dt, int goalSpeed, MOTOR_NUM m )
+void Motor::SetCurrSpeedInternal( uint16_t dt, int goalSpeed )
 {
-  if( m == MOTOR_NUM::M1) // X
-  {
-    goalSpeed = constrain( goalSpeed, -MAX_X_ABS_SPEED, MAX_X_ABS_SPEED );
-  }
-  else
-  {
-    goalSpeed = constrain( goalSpeed, -MAX_Y_ABS_SPEED, MAX_Y_ABS_SPEED );
-  }
+  goalSpeed = constrain( goalSpeed, -MAX_ABS_SPEED, MAX_ABS_SPEED );
   
   // We limit acceleration => speed ramp
   const int absAccel = ((long)m_AbsAccel * (long)dt) / 1000; // We divide by 1000 because dt are in microseconds
@@ -224,36 +217,12 @@ void Motor::SetCurrSpeedInternal( uint16_t dt, int goalSpeed, MOTOR_NUM m )
   else if ( ( m_CurrSpeed > 0 ) && ( m_Dir != 1 ) )
   {
     m_Dir = 1;
-    if ( m == M1 )
-    {
-      SET(PORTF,1);
-    }
-    else if ( m == M2 ) // with 3-motor system, this represents 2 motors
-    {
-#ifdef TWO_MOTOR      
-      SET(PORTF,7);
-#else
-      SET(PORTF,7);
-      SET(PORTL,1);
-#endif
-    }
+    SET(PORTF,1);
   }
   else if ( ( m_CurrSpeed < 0 ) && ( m_Dir != -1 ) )
   {
     m_Dir = -1;
-    if ( m == M1 )
-    {
-      CLR(PORTF,1);
-    }
-    else if ( m == M2 ) // with 3-motor system, this represents 2 motors
-    {
-#ifdef TWO_MOTOR      
-      CLR(PORTF,7);
-#else
-      CLR(PORTF,7);
-      CLR(PORTL,1);
-#endif      
-    }
+    CLR(PORTF,1);
   }
 
   #ifdef SHOW_LOG
@@ -286,23 +255,11 @@ void Motor::SetCurrSpeedInternal( uint16_t dt, int goalSpeed, MOTOR_NUM m )
     //    Serial.println(m_Period);
       //===========================
   
-  if ( m == M1 )
+  OCR1A = m_Period;
+  // Check  if we need to reset the timer...
+  if ( TCNT1 > OCR1A )
   {
-    OCR1A = m_Period;
-    // Check  if we need to reset the timer...
-    if ( TCNT1 > OCR1A )
-    {
-      TCNT1 = 0;
-    }
+    TCNT1 = 0;
   }
-  else if ( m == M2 )
-  {
-    OCR3A = m_Period;
-    // Check  if we need to reset the timer...
-    if ( TCNT3 > OCR3A )
-    {
-      TCNT3 = 0;
-    }
-  }  
   
 } // SetCurrSpeedInternal

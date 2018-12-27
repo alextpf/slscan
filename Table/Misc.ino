@@ -9,19 +9,6 @@ void SetPINS()
   pinMode(X_DIR_PIN, OUTPUT);
   pinMode(X_ENABLE_PIN, OUTPUT);
   
-#ifdef TWO_MOTOR  
-  pinMode(Y_STEP_PIN, OUTPUT);
-  pinMode(Y_DIR_PIN, OUTPUT);
-  pinMode(Y_ENABLE_PIN, OUTPUT);
-#else 
-  pinMode(Y_LEFT_STEP_PIN, OUTPUT);
-  pinMode(Y_LEFT_DIR_PIN, OUTPUT);
-  pinMode(Y_LEFT_ENABLE_PIN, OUTPUT);
-
-  pinMode(Y_RIGHT_STEP_PIN, OUTPUT);
-  pinMode(Y_RIGHT_DIR_PIN, OUTPUT);
-  pinMode(Y_RIGHT_ENABLE_PIN, OUTPUT);
-#endif
 
 } //SetPINS
 //================================================================
@@ -74,14 +61,14 @@ void SetTimerInterrupt()
 // TIMER 1 : STEPPER MOTOR SPEED CONTROL motor1
 ISR(TIMER1_COMPA_vect)
 {
-  int8_t dir = TurnTable.GetM1().GetDir();
+  int8_t dir = TurnTable.GetMotor().GetDir();
   if ( dir == 0 )
     return;
 
   SET(PORTF,0); // STEP X-AXIS
 
-  long currStep = TurnTable.GetM1().GetCurrStep();
-  TurnTable.GetM1().SetCurrStep( currStep + dir );
+  long currStep = TurnTable.GetMotor().GetCurrStep();
+  TurnTable.GetMotor().SetCurrStep( currStep + dir );
   
   __asm__ __volatile__ (
     "nop" "\n\t"
@@ -101,43 +88,6 @@ ISR(TIMER1_COMPA_vect)
   CLR(PORTF,0);
 }
 
-//====================================================================================================================
-// TIMER 3 : STEPPER MOTOR SPEED CONTROL motor2
-ISR(TIMER3_COMPA_vect)
-{
-  int8_t dir = TurnTable.GetM2().GetDir();
-  if ( dir == 0 )
-    return;
-
-#ifdef TWO_MOTOR
-  SET(PORTF,6); // STEP Y-AXIS
-#else
-  SET(PORTF,6); // STEP Y-AXIS (Y-left)
-  SET(PORTL,3); // STEP Z-AXIS (Y-right)
-#endif
-  
-  long currStep = TurnTable.GetM2().GetCurrStep();
-  TurnTable.GetM2().SetCurrStep( currStep + dir );
-  
-  __asm__ __volatile__ (
-    "nop" "\n\t"
-    "nop" "\n\t"
-    "nop" "\n\t"
-    "nop" "\n\t"
-    "nop" "\n\t"
-    "nop" "\n\t"
-    "nop" "\n\t"
-    "nop" "\n\t"
-    "nop" "\n\t"
-    "nop");  // Wait 2 cycles. With the other instruction and this we ensure a more than 1 microsenconds step pulse
-#ifdef TWO_MOTOR
-  CLR(PORTF,6);
-#else
-  CLR(PORTF,6);
-  CLR(PORTL,3);
-#endif
-}
-
 //================================================================
 // Test sequence to check mechanics, motor drivers...
 void testMovements()
@@ -151,63 +101,39 @@ void testMovements()
   
   if ( receivedString.equals("1") )
   {
-    TurnTable.SetPosStraight(ROBOT_MAX_X, ROBOT_MAX_Y); // upper right
+    TurnTable.SetPosStraight(TABLE_MAX_DEG); // upper right
   }
   else if ( receivedString.equals("2")  )
   {
-    TurnTable.SetPosStraight(ROBOT_MIN_X, ROBOT_MAX_Y); // upper left
+    TurnTable.SetPosStraight(TABLE_MIN_DEG); // upper left
   }
   else if ( receivedString.equals("3") )
   {
-    TurnTable.SetPosStraight(ROBOT_MIN_X, ROBOT_MIN_Y); // lower left
+    // x + 30
+    int pos = TurnTable.GetTablePos();
+    int newPos = pos + 30;
+    TurnTable.SetPosStraight( newPos);
   }
   else if ( receivedString.equals("4") )
   {
-    TurnTable.SetPosStraight(ROBOT_MAX_X, ROBOT_MIN_Y); // lower right
+    // x - 30
+    int pos = TurnTable.GetTablePos();
+    int newPos = pos - 30;
+    TurnTable.SetPosStraight( newPos);
   }
   else if ( receivedString.equals("5") )
   {
     // x + 5
-    RobotPos pos = TurnTable.GetTablePos();
-    RobotPos d(5,0);
-    RobotPos newPos = pos + d;
-    TurnTable.SetPosStraight( newPos.m_X, newPos.m_Y );
+    int pos = TurnTable.GetTablePos();
+    int newPos = pos + 5;
+    TurnTable.SetPosStraight( newPos);
   }
   else if ( receivedString.equals("6") )
   {
     // x - 5
-    RobotPos pos = TurnTable.GetTablePos();
-    RobotPos d(5,0);
-    
-    RobotPos newPos = pos - d;
-    TurnTable.SetPosStraight( newPos.m_X, newPos.m_Y );
-  }
-  else if ( receivedString.equals("7") )
-  {
-    // y + 5
-    RobotPos pos = TurnTable.GetTablePos();
-    RobotPos d(0,5);
-    
-    RobotPos newPos = pos + d;
-    TurnTable.SetPosStraight( newPos.m_X, newPos.m_Y );
-  }
-  else if ( receivedString.equals("8") )
-  {
-    // y - 5
-    RobotPos pos = TurnTable.GetTablePos();
-    RobotPos d(0,5);
-    
-    RobotPos newPos = pos - d;
-    TurnTable.SetPosStraight( newPos.m_X, newPos.m_Y );
-  }
-  else if ( receivedString.equals("9") )
-  {
-    TurnTable.SetPosStraight( ROBOT_CENTER_X,ROBOT_MAX_Y );
-  }
-  else if ( receivedString.equals("10") )
-  {
-    TurnTable.SetPosStraight( ROBOT_CENTER_X,ROBOT_MIN_Y );
+    int pos = TurnTable.GetTablePos();
+    int newPos = pos - 5;
+    TurnTable.SetPosStraight( newPos);
   }
   
 }
-

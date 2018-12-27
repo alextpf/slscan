@@ -7,11 +7,6 @@
 
 #include "Motor.h"
 #include "Arduino.h"
-#include "Point2D.h"
-
-typedef Point2D<int> Point2I;   // 16 bit
-typedef Point2D<long> Point2L;  // 32 bit
-typedef Point2I RobotPos;       // alias
 
 class TurnTable
 {
@@ -50,10 +45,10 @@ public:
   
   void SetTablePos(const int deg)
   {
-    m_Pos = pos;
+    m_Pos = deg;
   }
   
-  const RobotPos& GetTablePos() const // in deg
+  int GetTablePos() const // in deg
   {
     return m_Pos;
   }

@@ -6,11 +6,6 @@
 #define PACKET_READER_H
 
 #include "Arduino.h"
-#include "Point2D.h"
-
-typedef Point2D<int> Point2I;   // 16 bit
-typedef Point2D<long> Point2L;  // 32 bit
-typedef Point2I RobotPos;       // alias
 
 class PacketReader
 {
@@ -19,35 +14,23 @@ public:
     bool      ReadPacket();
     uint16_t  ExtractParamInt(uint8_t pos);
     
-    RobotPos  GetDesiredBotPos()
+    int  GetDesiredTablePos()
     {
-      return m_DesiredBotPos;
+      return m_DesiredTablePos;
     }
     
-    RobotPos  GetDetectedBotPos()
+    int       GetDesiredMotorSpeed()
     {
-      return m_DetectedBotPos;
-    }
-    
-    int       GetDesiredXMotorSpeed()
-    {
-      return m_DesiredXMotorSpeed;
-    }
-    
-    int       GetDesiredYMotorSpeed()
-    {
-      return m_DesiredYMotorSpeed;
+      return m_DesiredMotorSpeed;
     }
     
     void showNewData();
     
 private:
 
-    byte      m_Buffer[14];    
+    byte      m_Buffer[4];    
     bool      m_IsPacketRead;
-    RobotPos  m_DesiredBotPos;
-    RobotPos  m_DetectedBotPos;
-    int       m_DesiredXMotorSpeed;
-    int       m_DesiredYMotorSpeed;
+    int       m_DesiredTablePos; // deg
+    int       m_DesiredMotorSpeed;
 }; // PacketReader
 #endif
