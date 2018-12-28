@@ -13,7 +13,7 @@
 
 long curr_time;                 // used in main loop
 long prev_time;
-bool testmode = false;
+bool testmode = true;
 //
 TurnTable TurnTable;
 PacketReader reader;
@@ -45,10 +45,8 @@ void setup()
 
   #ifdef SHOW_LOG
       // log
-      Serial.print("Motor1 step = ");
-      Serial.print( m1s );
-      Serial.print(", Motor2 step = ");
-      Serial.println( m2s ); Serial.println("");
+      Serial.print("Motor step = ");
+      Serial.print( ms );Serial.println("");
       //=============================================
   #endif
 
@@ -76,15 +74,12 @@ void loop()
     }
 
     // there's new data coming
-    if( reader.ReadPacket() )
-    //if(false)
+    //if( reader.ReadPacket() )
+    if(false)
     {
     #ifdef SHOW_LOG
       //reader.showNewData();
-      Serial.print( reader.GetDesiredTablePos().m_X );
-      Serial.print(' ');
-      Serial.print( reader.GetDesiredTablePos().m_Y );
-      Serial.print(' ');
+      Serial.print( reader.GetDesiredTablePos());Serial.println();
 
     #endif
 
