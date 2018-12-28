@@ -113,7 +113,8 @@ private:
 		const cv::Mat& disp /*CV_32S*/,
 		const cv::Mat& Q,
 		vector<cv::Point3d>& pointcloud,
-		vector<cv::Point3i>& colors );
+		vector<cv::Point3i>& colors,
+        vector<cv::Vec2f>& textureCoord );
 
 	void DisplayAndSaveComposite(
 		const string& rectifyWinName,

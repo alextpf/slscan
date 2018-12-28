@@ -1,3 +1,11 @@
+//=======================================================
+// Alex Chen 2018
+// alextpf@gmail.com
+//
+// note: for faster debugging, turn on
+// "loadFromSaved", "loadFromSavedMap" and "loadDisp" = true
+// if they are already generated
+//=======================================================
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <map> // for multimap, in Decode
@@ -165,7 +173,7 @@ void GrayCode::GenerateShadowMask(
 	int shadowCount = 0;
 	int nonShadowCount = 0;
 
-	bool loadFromSaved = false;
+	bool loadFromSaved = true;
 
     for( int k = 0; k < numSrc; k++ )
     {
@@ -305,7 +313,7 @@ bool GrayCode::Decode(
     std::stringstream rightPath;
     rightPath << m_Path << "rightCamMap.txt";
 
-	bool loadFromSavedMap = false;
+	bool loadFromSavedMap = true;
 	if ( loadFromSavedMap )
 	{
 		std::ifstream logLeftCam;
@@ -425,7 +433,7 @@ bool GrayCode::Decode(
 	bool showMatched = false;
 	bool saveDisp = true;
 
-	bool loadDisp = false;
+	bool loadDisp = true;
 
     std::stringstream dispPath;
     dispPath << m_Path << "Disparity.txt";

@@ -24,6 +24,7 @@
 
 #include "LiveViewProcessor.h"
 #include "Calibrator.h"
+#include "SerialPort.h"
 
 using namespace cv;
 using namespace std;
@@ -87,6 +88,7 @@ bool CalibrateRight();
 bool CalibrateLeftAndRight();
 bool ScanOneView( string path );
 bool Generate3DForOneView( string path );
+bool OneTurn( const int curDeg );
 
 // utility
 DIR_STATUS DirExists( const char *path );
@@ -110,7 +112,10 @@ int w; // cali pattern width
 int h; // cali pattern height
 int projW; // projector width
 int projH; // projector height
+int com; // com port
+int speed; // turn table speed
 float blockSize; // physical size of a chessboard block, in mm
+shared_ptr<SerialPort> serialPort;
 //========================================
 int main()
 {
@@ -215,27 +220,38 @@ int main()
 				std::cout << "Please enter the project name: ";
 				std::cin.getline( name, 256 );
 
-				int total = 360; // degree, full circle
+				int fullCircle = 360; // degree, full circle
 				int delta = 30; // one turn
-				int steps = total / delta;
+				int steps = fullCircle / delta;
+
+                char comPort[20];
+                sprintf_s( comPort, "\\\\.\\COM%d", com );
+                serialPort = make_shared<SerialPort>( comPort );
 
 				// each step capture
-				for ( int i = 0; i < total; i += delta )
+				for ( int curDeg = 0; curDeg < fullCircle; curDeg += delta )
 				{
 					std::stringstream dir;
-					dir << name << i << "/";
+					dir << name << curDeg << "/";
 					_mkdir( dir.str().c_str() );
 					if ( !ScanOneView( dir.str() ) )
 					{
 						return -1;
 					}//if
+
+                    // now rotate turn table
+                    if( !OneTurn( curDeg, speed ) )
+                    {
+                        cout << "turn error\n";
+                        return -1;
+                    }
 				}//for i
 
 				// now generate
-				for ( int i = 0; i < total; i += delta )
+				for ( int curDeg = 0; curDeg < fullCircle; curDeg += delta )
 				{
 					std::stringstream dir;
-					dir << name << i << "/";
+					dir << name << curDeg << "/";
 					if ( !Generate3DForOneView( dir.str() ) )
 					{
 						return -1;
@@ -289,12 +305,17 @@ void WriteConfig()
 	float block_size = 50.0f; //mm
     int projectorWidth = 1280; // VANKYO Leisure 510
     int projectorHeight = 768;
+    int com = 4; // com port
+    int speed = 50; // speed
 
 	cv::FileStorage fs( "config.xml", cv::FileStorage::WRITE );
-	fs << "board_width" << board_width << "board_height" << board_height
-	   << "block_size" << block_size
-       << "projector_width" << projectorWidth
-       << "projector_height" << projectorHeight;
+    fs << "board_width" << board_width << "board_height" << board_height
+        << "block_size" << block_size
+        << "projector_width" << projectorWidth
+        << "projector_height" << projectorHeight
+        << "com" << com
+        << "speed" << speed;
+
 	fs.release();
 }//WriteConfig
 
@@ -313,6 +334,8 @@ void ReadConfig()
 	fs["block_size"] >> blockSize;
 	fs["projector_width"] >> projW;
 	fs["projector_height"] >> projH;
+    fs["com"] >> com;
+    fs["speed"] >> speed;
 
 	fs.release();
 }//ReadConfig
@@ -834,3 +857,48 @@ DIR_STATUS DirExists( const char *path )
         return NO_EXIST;
     }
 } // DirExists
+
+bool OneTurn( const int curDeg, const int speed )
+{
+    // send messeage over the serial port
+
+    // message lay out :
+    // 0, 1: Initial sync markers
+    // 2, 3: desired table degree
+    // 4, 5: desired table speed
+    BYTE message[6];
+
+    // Initial sync markers
+    message[0] = 0x7F;
+    message[1] = 0x7F;
+
+    // desired table degree
+    message[2] = ( curDeg >> 8 ) & 0xFF;
+    message[3] = curDeg & 0xFF;
+
+    // desired table degree
+    message[4] = ( speed >> 8 ) & 0xFF;
+    message[5] = speed & 0xFF;
+
+    bool ok = serialPort->WriteSerialPort<BYTE>( message, 6 );
+
+    if( !ok )
+    {
+        return false;
+    }
+
+    // wait until the turn is done
+    bool done( false );
+
+    while( !done )
+    {
+        ok = serialPort->ReadSerialPort<BYTE>( message, 1 );
+        if( !ok )
+        {
+            return false;
+        }
+        done = message[0] == 0XFFFFFFFF;
+    }
+
+    return ok;
+}//OneTurn

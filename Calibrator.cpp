@@ -191,6 +191,10 @@ void Calibrator::Generate3D()
 		{
 			//save the "white" image
 			colrImg = output[0].clone(); // 8UC3
+
+            std::stringstream texturePath;
+            texturePath << m_Path << "texture" << m_Extension;
+            cv::imwrite( texturePath.str(), colrImg );
 		}
 
 		// save tmp for composite purpose
@@ -285,9 +289,11 @@ void Calibrator::Generate3D()
 
 	vector<cv::Point3d> pointcloud;
 	vector<cv::Point3i> colors;
+    vector<cv::Vec2f> textureCoord;
+
 	cv::Mat disp = m_GrayCode.GetDisparityMap(); // CV_32S
 
-	ReprojectImageTo3D( colrImg, disp, Q, pointcloud, colors ); // Q is 64FC1
+	ReprojectImageTo3D( colrImg, disp, Q, pointcloud, colors, textureCoord ); // Q is 64FC1
 
 	// export
 
@@ -296,8 +302,13 @@ void Calibrator::Generate3D()
     std::stringstream plyPath;
     plyPath << m_Path << "results.ply";
 
+    // don't export wrl. No mesh yet!
+    std::stringstream wrlPath;
+    wrlPath << m_Path << "results.wrl";
+
 	Exporter::ExportToObj( pointcloud, objPath.str() );
 	Exporter::ExportToPly( pointcloud, colors, plyPath.str() );
+    Exporter::SaveXYZAndTexture( pointcloud, textureCoord, wrlPath.str() );
 } // Generate3D
 
 //=======================================================================
@@ -306,7 +317,8 @@ void Calibrator::ReprojectImageTo3D(
 	const cv::Mat& disp , // CV_32S
 	const cv::Mat& Q, // 4x4, 64FC1
 	vector<cv::Point3d>& pointcloud,
-	vector<cv::Point3i>& colors )
+	vector<cv::Point3i>& colors,
+    vector<cv::Vec2f>& textureCoord )
 {
 	cv::Mat tmp = cv::Mat( 4, 1, CV_64F );
 
@@ -328,17 +340,29 @@ void Calibrator::ReprojectImageTo3D(
 
 			tmp /= tmp.at<double>( 3, 0 );
 
+            // geometry info
 			cv::Vec3d point;
 			point[0] = tmp.at<double>( 0, 0 );
 			point[1] = -tmp.at<double>( 1, 0 ); // flip y
 			point[2] = tmp.at<double>( 2, 0 );
 
 			pointcloud.push_back( point );
+
+            // color info
 			cv::Point3i color;
 			color.x = int( colorImg.at<cv::Vec3b>( r, c )[2] );//r
 			color.y = int( colorImg.at<cv::Vec3b>( r, c )[1] );//g
 			color.z = int( colorImg.at<cv::Vec3b>( r, c )[0] );//b
 			colors.push_back( color );
+
+            // texture coordinate
+            cv::Vec2f coord;
+            float s = static_cast<float>( c ) / static_cast<float>( disp.cols - 1.0f );
+            float t = 1.0f - static_cast<float>( r ) / static_cast<float>( disp.rows - 1.0f );
+            coord[0] = s;
+            coord[1] = t;
+
+            textureCoord.push_back( coord );
 		}//for c
 	}//for r
 }//ReprojectImageTo3D
