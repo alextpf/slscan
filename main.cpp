@@ -6,6 +6,7 @@
 // - object has to be located at ~ m from the projector (mine is a VANKYO Leisure 510 )
 // - the extented screen (for the projector) has to be set at the resolution of 1280 x 768, with no scaling
 // - the scanner has a depth of XX m, and width, height of XX m
+// - to run off auto focus of Logitech Webcam C920, download its LogiCameraSettings_2.5.17.exe or LGS to run it off
 //========================================================
 #include <iostream>
 #include <string>
@@ -40,6 +41,7 @@ enum OPERATION {
 	MANUAL_SCAN_ONE_VIEW,
 	GENERATE_3D_ONE_VIEW,
 	AUTO_SCAN,
+	TURN_TABLE,
 	WRITE_CONFIG,
 	EXIT
 };
@@ -88,7 +90,7 @@ bool CalibrateRight();
 bool CalibrateLeftAndRight();
 bool ScanOneView( string path );
 bool Generate3DForOneView( string path );
-bool OneTurn( const int curDeg );
+bool OneTurn( const int curDeg, const int speed );
 
 // utility
 DIR_STATUS DirExists( const char *path );
@@ -114,6 +116,7 @@ int projW; // projector width
 int projH; // projector height
 int com; // com port
 int speed; // turn table speed
+int duration; // duration of each turn of turntable
 float blockSize; // physical size of a chessboard block, in mm
 shared_ptr<SerialPort> serialPort;
 //========================================
@@ -192,9 +195,17 @@ int main()
 
 			case MANUAL_SCAN_ONE_VIEW:
 			{
-                string path = "scan_data/";
+				char name[256];
 
-				if ( !ScanOneView( path ) )
+				system( "CLS" ); // clear prompt command
+				std::cout << "Please enter the project name: ";
+				std::cin.getline( name, 256 );
+
+				std::stringstream dir;
+				dir << name << "/";
+				_mkdir( dir.str().c_str() );
+
+				if ( !ScanOneView( dir.str() ) )
 				{
 					return -1;
 				}
@@ -224,9 +235,23 @@ int main()
 				int delta = 30; // one turn
 				int steps = fullCircle / delta;
 
-                char comPort[20];
-                sprintf_s( comPort, "\\\\.\\COM%d", com );
-                serialPort = make_shared<SerialPort>( comPort );
+				if ( !serialPort )
+				{
+					char comPort[20];
+					sprintf_s( comPort, "\\\\.\\COM%d", com );
+					serialPort = make_shared<SerialPort>( comPort );
+					if ( !serialPort )
+					{
+						cout << "serial communication error\n";
+						return -1;
+					}
+				}
+
+				if ( !serialPort->IsConnected() )
+				{
+					cout << "serial not connected\n";
+					return -1;
+				}
 
 				// each step capture
 				for ( int curDeg = 0; curDeg < fullCircle; curDeg += delta )
@@ -245,6 +270,8 @@ int main()
                         cout << "turn error\n";
                         return -1;
                     }
+
+					cv::waitKey(duration);
 				}//for i
 
 				// now generate
@@ -260,6 +287,44 @@ int main()
 			}
 			break;
 
+			case TURN_TABLE:
+			{
+				char pos[256];
+
+				system( "CLS" ); // clear prompt command
+				std::cout << "Please enter table position in degree: ";
+				std::cin.getline( pos, 256 );
+				stringstream stream;
+				stream.str( pos );
+				int deg;
+				stream >> deg;
+
+				if ( !serialPort )
+				{
+					char comPort[20];
+					sprintf_s( comPort, "\\\\.\\COM%d", com );
+					serialPort = make_shared<SerialPort>( comPort );
+					if ( !serialPort )
+					{
+						cout << "serial communication error\n";
+						return -1;
+					}
+				}
+
+				if ( !serialPort->IsConnected() )
+				{
+					cout << "serial not connected\n";
+					return -1;
+				}
+
+				// now rotate turn table
+				if ( !OneTurn( deg, speed ) )
+				{
+					cout << "turn error\n";
+					return -1;
+				}
+			}
+			break;
 			default:
 				break;
         }// switch
@@ -284,8 +349,9 @@ OPERATION MainMenu()
 	cout << "[7]: Manual Scan one view \n";
 	cout << "[8]: Generate 3D of scanned one view \n";
 	cout << "[9]: Auto Scan with turntable \n";
-	cout << "[10]: Write Config file \n";
-	cout << "[11]: Exit \n\n";
+	cout << "[10]: Turn table \n";
+	cout << "[11]: Write Config file \n";
+	cout << "[12]: Exit \n\n";
 	cout << "Answer: ";
 
 	char name[256];
@@ -307,6 +373,7 @@ void WriteConfig()
     int projectorHeight = 768;
     int com = 4; // com port
     int speed = 50; // speed
+	int duration = 5000;//ms
 
 	cv::FileStorage fs( "config.xml", cv::FileStorage::WRITE );
     fs << "board_width" << board_width << "board_height" << board_height
@@ -314,7 +381,8 @@ void WriteConfig()
         << "projector_width" << projectorWidth
         << "projector_height" << projectorHeight
         << "com" << com
-        << "speed" << speed;
+        << "speed" << speed
+		<< "duration" << duration;
 
 	fs.release();
 }//WriteConfig
@@ -335,7 +403,8 @@ void ReadConfig()
 	fs["projector_width"] >> projW;
 	fs["projector_height"] >> projH;
     fs["com"] >> com;
-    fs["speed"] >> speed;
+	fs["speed"] >> speed;
+	fs["duration"] >> duration;
 
 	fs.release();
 }//ReadConfig
@@ -876,7 +945,7 @@ bool OneTurn( const int curDeg, const int speed )
     message[2] = ( curDeg >> 8 ) & 0xFF;
     message[3] = curDeg & 0xFF;
 
-    // desired table degree
+    // desired table speed
     message[4] = ( speed >> 8 ) & 0xFF;
     message[5] = speed & 0xFF;
 
@@ -888,7 +957,8 @@ bool OneTurn( const int curDeg, const int speed )
     }
 
     // wait until the turn is done
-    bool done( false );
+	// TODO: this is not working for now
+    /*bool done( false );
 
     while( !done )
     {
@@ -897,8 +967,10 @@ bool OneTurn( const int curDeg, const int speed )
         {
             return false;
         }
-        done = message[0] == 0XFFFFFFFF;
-    }
+		cout << message[0] << endl;
+
+        done = message[0] == 0x01;
+    }*/
 
     return ok;
 }//OneTurn

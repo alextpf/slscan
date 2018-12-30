@@ -11,7 +11,7 @@ PacketReader::PacketReader()
 //==========================================================================
 bool PacketReader::ReadPacket()
 {
-    const byte numBytes = 14; // 12 byte data + 2 bytes sync markers
+    const byte numBytes = 6; // 12 byte data + 2 bytes sync markers
     static bool inSync = false; // true: ready; false: not ready
     static byte counter = 0;
     
@@ -66,7 +66,6 @@ bool PacketReader::ReadPacket()
 #ifdef DEBUG_SERIAL              
                 Serial.println("done");
 #endif                
-              
                 // Extract parameters
                 m_DesiredTablePos = ExtractParamInt( 2 );
                 m_DesiredMotorSpeed = ExtractParamInt( 0 );

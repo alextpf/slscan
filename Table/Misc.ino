@@ -33,28 +33,8 @@ void SetTimerInterrupt()
   OCR1A = ZERO_SPEED;   // Motor stopped
   TCNT1 = 0;
 
-  // We use TIMER 3 for stepper motor Y AXIS 
-  // STEPPER MOTORS INITIALIZATION
-  // TIMER3 CTC MODE
-  TCCR3B &= ~(1<<WGM13);
-  TCCR3B |=  (1<<WGM12);
-  TCCR3A &= ~(1<<WGM11); 
-  TCCR3A &= ~(1<<WGM10);
-
-  // output mode = 00 (disconnected)
-  TCCR3A &= ~(3<<COM1A0); 
-  TCCR3A &= ~(3<<COM1B0); 
-
-  // Set the timer pre-scaler
-  // Generally we use a divider of 8, resulting in a 2MHz timer on 16MHz CPU
-  TCCR3B = (TCCR3B & ~(0x07<<CS10)) | (2<<CS10);
-
-  OCR3A = ZERO_SPEED;   // Motor stopped
-  TCNT3 = 0;
-
   delay(1000);
   TIMSK1 |= (1<<OCIE1A);  // Enable Timer1 interrupt
-  TIMSK3 |= (1<<OCIE1A);  // Enable Timer1 interrupt
 } // SetTimerInterrupt
 
 //=========================================================
@@ -135,5 +115,4 @@ void testMovements()
     int newPos = pos - 5;
     TurnTable.SetPosStraight( newPos);
   }
-  
 }

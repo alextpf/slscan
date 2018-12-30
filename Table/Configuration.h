@@ -6,7 +6,7 @@
 ////////////////////////////
 // debug
 ////////////////////////////
-#define SHOW_LOG            1 // comment it out if you don't want to show debug info
+//#define SHOW_LOG            1 // comment it out if you don't want to show debug info
 ////////////////////////////
 // Pin definition
 ////////////////////////////
@@ -41,7 +41,7 @@
 #define MIN_ACCEL         10						// make sure this is not 0
 #define MIN_SPEED         5
 
-#define SCURVE_LOW_SPEED  200
+#define SCURVE_LOW_SPEED  600
 
 #define ZERO_SPEED        65535
 

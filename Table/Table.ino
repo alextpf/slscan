@@ -13,7 +13,7 @@
 
 long curr_time;                 // used in main loop
 long prev_time;
-bool testmode = true;
+bool testmode = false;
 //
 TurnTable TurnTable;
 PacketReader reader;
@@ -22,8 +22,7 @@ PacketReader reader;
 void setup()
 {
   Serial.begin(BAUD_RATE);
-  delay(5000);
-
+  
   SetPINS();
 
   // Enable Motors
@@ -64,7 +63,7 @@ void setup()
 void loop()
 {
   curr_time = micros();
-  if ( curr_time - prev_time >= 1000  /*&& TurnTable.GetLoopCounter()< 20*/ )  // 1Khz loop
+  if ( curr_time - prev_time >= 1000 )  // 1Khz loop //&& TurnTable.GetLoopCounter()< 20
   {
     prev_time = curr_time; // update time
 
@@ -74,15 +73,13 @@ void loop()
     }
 
     // there's new data coming
-    //if( reader.ReadPacket() )
-    if(false)
+    if( reader.ReadPacket() )
+    //if(false)
     {
     #ifdef SHOW_LOG
       //reader.showNewData();
       Serial.print( reader.GetDesiredTablePos());Serial.println();
-
     #endif
-
       {
         TurnTable.SetMaxAbsSpeed( reader.GetDesiredMotorSpeed() );
         TurnTable.SetPosStraight( reader.GetDesiredTablePos() );
@@ -90,10 +87,11 @@ void loop()
     }
 
     TurnTable.Update(); // internally update
-
-    if ( TurnTable.GetLoopCounter() % 10 == 0 )
+    /*
+    if (TurnTable.GetIsGoalCounter() == 0 )
     {
-      TurnTable.UpdatePosStraight();  // update straight line motion algorithm
+      Serial.println(1); // show degree
     }
-  }
+    */
+  }  
 }

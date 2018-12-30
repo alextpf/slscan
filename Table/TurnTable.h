@@ -82,15 +82,22 @@ public:
   {
     return m_LoopCounter; 
   }
+
+  int GetIsGoalCounter()
+  {
+    return m_IsGoalCounter;
+  }
   
   // utility function
   static int MotorStepToTurnTablePos( long motorStep ); // in deg
   static long TurnTablePosToMotorStep(const int pos/*deg*/);
 private:  
 
-  int     m_Pos; // in degree
+  int     m_Pos; // current, in degree
+  int     m_GoalPos; // goal ,in degree
 	Motor   m_Motor; 
 	uint32_t m_Time; // time stamp, in micro sec. 
   unsigned long m_LoopCounter; 
+  int     m_IsGoalCounter;
 };
 #endif

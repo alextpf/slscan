@@ -29,6 +29,9 @@ long TurnTable::TurnTablePosToMotorStep(const int pos/*deg*/)
 TurnTable::TurnTable()
 : m_Time( 0 )
 , m_LoopCounter( 0 )
+, m_IsGoalCounter( 0 )
+, m_GoalPos( 0 )
+, m_Pos( 0 )
 {}
 
 //=========================================================
@@ -38,11 +41,22 @@ TurnTable::~TurnTable()
 //=========================================================
 void TurnTable::Update() // aka positionControl()
 {  
+  
   m_LoopCounter++;
   
   // convert from motor steps to robot position
   m_Pos = MotorStepToTurnTablePos( m_Motor.GetCurrStep() ); // deg. update m_Pos
+/*
+  if( m_GoalPos == m_Pos )
+  {
+    m_IsGoalCounter++;
+  }
 
+  if( m_IsGoalCounter >= 20 )
+  {
+    m_IsGoalCounter = 0;    
+  }
+  */
 //  if (m_LoopCounter % 100 == 0 )
   {
   #ifdef SHOW_LOG      
@@ -90,13 +104,13 @@ void TurnTable::Update() // aka positionControl()
 void TurnTable::SetPosInternal( int deg )
 {    
   // Constrain to robot limits...  
-  int goalDeg = constrain( deg, TABLE_MIN_DEG, TABLE_MAX_DEG ); // mm
+  m_GoalPos = constrain( deg, TABLE_MIN_DEG, TABLE_MAX_DEG ); // mm
 
-  long ms = TurnTablePosToMotorStep(goalDeg);
+  long ms = TurnTablePosToMotorStep( m_GoalPos );
 
   #ifdef SHOW_LOG
       Serial.print("SetPosInternal: Motor1 step = ");
-      Serial.println( goalDeg );
+      Serial.println( m_GoalPos );
   #endif
     
   m_Motor.SetGoalStep( ms ); // set m_GoalStep
