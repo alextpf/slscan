@@ -42,6 +42,11 @@ public:
   {
     return m_Motor;
   }
+
+  void ResetMotor()
+  {
+    m_Motor.SetCurrStep(0);
+  }
   
   void SetTablePos(const int deg)
   {

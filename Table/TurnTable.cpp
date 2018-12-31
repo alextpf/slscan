@@ -13,13 +13,13 @@
 //=========================================================
 int TurnTable::MotorStepToTurnTablePos(long motorStep)
 {
-  return motorStep / STEPS_PER_UNIT;
+  return motorStep / STEPS_PER_DEG;
 } // MotorStepToTurnTablePos
 
 //=========================================================
 long TurnTable::TurnTablePosToMotorStep(const int pos/*deg*/)
 {
-  return (long)(pos)* (long)STEPS_PER_UNIT;
+  return (long)(pos)* (long)STEPS_PER_DEG;
 } // TurnTablePosToMotorStep
 
 ////////////////////////////////////////////
@@ -104,7 +104,8 @@ void TurnTable::Update() // aka positionControl()
 void TurnTable::SetPosInternal( int deg )
 {    
   // Constrain to robot limits...  
-  m_GoalPos = constrain( deg, TABLE_MIN_DEG, TABLE_MAX_DEG ); // mm
+  //m_GoalPos = constrain( deg, TABLE_MIN_DEG, TABLE_MAX_DEG ); // deg
+  m_GoalPos = deg;
 
   long ms = TurnTablePosToMotorStep( m_GoalPos );
 

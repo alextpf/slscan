@@ -53,8 +53,11 @@ void setup()
 
   TurnTable.SetMaxAbsSpeed( MAX_ABS_SPEED );
   TurnTable.SetMaxAbsAccel( MAX_ABS_ACCEL );
-
+#ifdef NO_STOP
+  TurnTable.SetPosStraight( 10000 );
+#else
   TurnTable.SetPosStraight( 0 );
+#endif
 
   prev_time = micros();
   TurnTable.SetTime( prev_time );
@@ -71,11 +74,22 @@ void loop()
     {
       testMovements();
     }
-
+    
+#ifdef NO_STOP
+    if( TurnTable.GetTablePos()>8000 )
+    {
+      TurnTable.SetTablePos( 0 );
+      TurnTable.ResetMotor();
+    }
+#else
     // there's new data coming
     if( reader.ReadPacket() )
     //if(false)
     {
+      // every time a new command is read, reset step
+      TurnTable.SetTablePos( 0 );
+      TurnTable.ResetMotor();
+      
     #ifdef SHOW_LOG
       //reader.showNewData();
       Serial.print( reader.GetDesiredTablePos());Serial.println();
@@ -85,6 +99,7 @@ void loop()
         TurnTable.SetPosStraight( reader.GetDesiredTablePos() );
       }
     }
+#endif
 
     TurnTable.Update(); // internally update
     /*
