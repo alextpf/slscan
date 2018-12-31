@@ -24,8 +24,8 @@
 
 // PCL
 #include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
-#include <pcl/registration/icp.h>
+//#include <pcl/point_types.h>
+//#include <pcl/registration/icp.h>
 
 #include "LiveViewProcessor.h"
 #include "Calibrator.h"
@@ -272,8 +272,8 @@ int main()
                     while( !done )
                     {
                         char data[256];
-                        bool isRead = serialPort->ReadSerialPort<char>( data, 256 );
-                        if( isRead )
+                        int bytesRead = serialPort->ReadSerialPort<char>( data, 256 );
+                        if( bytesRead > 0 )
                         {
                             done = data == isDone;
                             //debug
