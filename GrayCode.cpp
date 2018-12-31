@@ -175,6 +175,8 @@ void GrayCode::GenerateShadowMask(
 
 	bool loadFromSaved = true;
 
+    int reportFreq = m_ImgHeight / 10;
+
     for( int k = 0; k < numSrc; k++ )
     {
 		m_ShadowMask[k] = cv::Mat( m_ImgHeight, m_ImgWidth, CV_8U );
@@ -190,11 +192,13 @@ void GrayCode::GenerateShadowMask(
 
 			for ( int r = 0; r < m_ImgHeight; r++ ) // row
 			{
-				system( "CLS" ); // clear prompt command
-				cout << "Calculating Shadow Mask ...: ";
-				float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
+                if( r % reportFreq == 0 )
+                {
+                    cout << "Calculating Shadow Mask ...: ";
+                    float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
-				cout << percentage << "%\n";
+                    cout << percentage << "%\n";
+                }
 
 				for ( int c = 0; c < m_ImgWidth; c++ ) // col
 				{
@@ -227,11 +231,13 @@ void GrayCode::GenerateShadowMask(
 
 			for ( int r = 0; r < m_ImgHeight; r++ ) // row
 			{
-				system( "CLS" ); // clear prompt command
-				cout << "Calculating Shadow Mask ...: ";
-				float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
+                if( r % reportFreq == 0 )
+                {
+                    cout << "Calculating Shadow Mask ...: ";
+                    float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
-				cout << percentage << "%\n";
+                    cout << percentage << "%\n";
+                }
 
 				for ( int c = 0; c < m_ImgWidth; c++ ) // col
 				{
@@ -363,15 +369,19 @@ bool GrayCode::Decode(
 		logRightCam.open( rightPath.str(), std::ios_base::app ); // append mode
 		//=================
 
+        int reportFreq = m_ImgHeight / 10;
+
 		for ( int k = 0; k < numSrc; k++ ) // number of source (2, cameras)
 		{
 			for ( int r = 0; r < m_ImgHeight; r++ ) // row
 			{
-				system( "CLS" ); // clear prompt command
-				cout << "Creating Maps ...: ";
-				float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
+                if( r % reportFreq == 0 )
+                {
+                    cout << "Creating Maps ...: ";
+                    float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
-				cout << percentage << "%\n";
+                    cout << percentage << "%\n";
+                }
 
 				for ( int c = 0; c < m_ImgWidth; c++ ) // col
 				{
@@ -480,16 +490,20 @@ bool GrayCode::Decode(
 		int marker = 0; // running marker which indicate where the pix is on the right img
 		int rightLimit;
 
+        int reportFreq = m_ImgHeight / 10;
+
 		// scan line fashion to find the correspondance
 		for ( int r = 0; r < m_ImgHeight; r++ ) // row
 		{
-			// show percentage
-			system( "CLS" ); // clear prompt command
-			cout << "Decoding ...: ";
-			float percentage = float( r ) / float( m_ImgHeight ) * 100.0f;
+            if( r % reportFreq == 0 )
+            {
+                // show percentage
+                cout << "Decoding ...: ";
+                float percentage = float( r ) / float( m_ImgHeight ) * 100.0f;
 
-			cout << percentage << "%\n";
-			//===================================
+                cout << percentage << "%\n";
+                //===================================
+            }
 
 			for ( int c = 0; c < m_ImgWidth; c++ ) // col
 			{

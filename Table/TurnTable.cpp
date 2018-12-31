@@ -46,7 +46,7 @@ void TurnTable::Update() // aka positionControl()
   
   // convert from motor steps to robot position
   m_Pos = MotorStepToTurnTablePos( m_Motor.GetCurrStep() ); // deg. update m_Pos
-/*
+
   if( m_GoalPos == m_Pos )
   {
     m_IsGoalCounter++;
@@ -56,7 +56,7 @@ void TurnTable::Update() // aka positionControl()
   {
     m_IsGoalCounter = 0;    
   }
-  */
+
 //  if (m_LoopCounter % 100 == 0 )
   {
   #ifdef SHOW_LOG      

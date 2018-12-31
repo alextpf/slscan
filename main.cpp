@@ -13,15 +13,19 @@
 #include <stdlib.h>
 #include <conio.h>
 #include <memory>
-#include <fstream>      // std::ifstream
+#include <fstream> // std::ifstream
 #include <direct.h> //for mkdir
-#include <sys/types.h>
-#include <sys/stat.h>
 
+// CV
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/video.hpp>
 #include <opencv2/imgproc.hpp>
+
+// PCL
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
 
 #include "LiveViewProcessor.h"
 #include "Calibrator.h"
@@ -35,15 +39,15 @@ enum OPERATION {
 	CAPTURE_CALI_LEFT = 1,
 	CAPTURE_CALI_RIGHT,
 	CAPTURE_CALI_LEFT_AND_RIGHT,
-	CALIBRATE_LEFT,
-	CALIBRATE_RIGHT,
-	CALIBRATE_LEFT_AND_RIGHT,
 	MANUAL_SCAN_ONE_VIEW,
-	GENERATE_3D_ONE_VIEW,
 	AUTO_SCAN,
 	TURN_TABLE,
 	WRITE_CONFIG,
-	EXIT
+	EXIT,
+    CALIBRATE_LEFT,
+    CALIBRATE_RIGHT,
+    CALIBRATE_LEFT_AND_RIGHT,
+    GENERATE_3D_ONE_VIEW
 };
 
 enum SOURCE_TYPE {
@@ -141,55 +145,49 @@ int main()
 
             case CAPTURE_CALI_LEFT:
 			{
+                // capture
 				if ( !CaptureLeft() )
 				{
 					return -1;
 				}
+
+                //calibrate
+                if( !CalibrateLeft() )
+                {
+                    return -1;
+                }
             }//case CAPTURE_CALI_LEFT:
             break;
 
 			case CAPTURE_CALI_RIGHT:
 			{
+                // capture
 				if ( !CaptureRight() )
 				{
 					return -1;
 				}
+
+                //calibrate
+                if( !CalibrateRight() )
+                {
+                    return -1;
+                }
 			}
 			break;
 
 			case CAPTURE_CALI_LEFT_AND_RIGHT:
 			{
+                // capture
 				if ( !CaptureLeftAndRight() )
 				{
 					return -1;
 				}
-			}
-			break;
 
-			case CALIBRATE_LEFT:
-			{
-				if ( !CalibrateLeft() )
-				{
-					return -1;
-				}
-			}
-			break;
-
-			case CALIBRATE_RIGHT:
-			{
-				if ( !CalibrateRight() )
-				{
-					return -1;
-				}
-			}
-			break;
-
-			case CALIBRATE_LEFT_AND_RIGHT:
-			{
-				if ( !CalibrateLeftAndRight() )
-				{
-					return -1;
-				}
+                //calibrate
+                if( !CalibrateLeftAndRight() )
+                {
+                    return -1;
+                }
 			}
 			break;
 
@@ -197,7 +195,6 @@ int main()
 			{
 				char name[256];
 
-				system( "CLS" ); // clear prompt command
 				std::cout << "Please enter the project name: ";
 				std::cin.getline( name, 256 );
 
@@ -205,21 +202,17 @@ int main()
 				dir << name << "/";
 				_mkdir( dir.str().c_str() );
 
+                // capture
 				if ( !ScanOneView( dir.str() ) )
 				{
 					return -1;
 				}
-			}
-			break;
 
-			case GENERATE_3D_ONE_VIEW:
-			{
-                string path = "scan_data/";
-
-				if ( !Generate3DForOneView( path ) )
-				{
-					return -1;
-				}
+                // calculate
+                if( !Generate3DForOneView( dir.str() ) )
+                {
+                    return -1;
+                }
 			}
 			break;
 
@@ -227,13 +220,8 @@ int main()
 			{
 				char name[256];
 
-				system( "CLS" ); // clear prompt command
 				std::cout << "Please enter the project name: ";
 				std::cin.getline( name, 256 );
-
-				int fullCircle = 360; // degree, full circle
-				int delta = 30; // one turn
-				int steps = fullCircle / delta;
 
 				if ( !serialPort )
 				{
@@ -253,9 +241,15 @@ int main()
 					return -1;
 				}
 
+                int fullCircle = 360; // degree, full circle
+                int delta = 30; // one turn
+                int steps = fullCircle / delta;
+
 				// each step capture
-				for ( int curDeg = 0; curDeg < fullCircle; curDeg += delta )
+                for( int i = 0, curDeg = 0; i < steps; ++i, curDeg += delta )
 				{
+                    cout << "Scanning " << i + 1 << "/" << steps << " view ... \n";
+
 					std::stringstream dir;
 					dir << name << curDeg << "/";
 					_mkdir( dir.str().c_str() );
@@ -265,18 +259,39 @@ int main()
 					}//if
 
                     // now rotate turn table
-                    if( !OneTurn( curDeg, speed ) )
+                    if( !OneTurn( delta, speed ) )
                     {
                         cout << "turn error\n";
                         return -1;
                     }
 
-					cv::waitKey(duration);
+                    // wait until the turn is done
+                    // TODO: this is not working for now??
+                    bool done( false );
+                    string isDone = "IsDone";
+                    while( !done )
+                    {
+                        char data[256];
+                        bool isRead = serialPort->ReadSerialPort<char>( data, 256 );
+                        if( isRead )
+                        {
+                            done = data == isDone;
+                            //debug
+                            cout << data << endl;
+                        }
+                    }
+
+                    // alternative method; blindly wait for some period
+					//cv::waitKey(duration);
+
+
 				}//for i
 
 				// now generate
-				for ( int curDeg = 0; curDeg < fullCircle; curDeg += delta )
-				{
+                for( int i = 0, curDeg = 0; i < steps; ++i, curDeg += delta )
+                {
+                    cout << "Generating " << i + 1 << "/" << steps << " view ... \n";
+
 					std::stringstream dir;
 					dir << name << curDeg << "/";
 					if ( !Generate3DForOneView( dir.str() ) )
@@ -291,8 +306,7 @@ int main()
 			{
 				char pos[256];
 
-				system( "CLS" ); // clear prompt command
-				std::cout << "Please enter table position in degree: ";
+				std::cout << "Please enter how many degrees you want the table to turn: ";
 				std::cin.getline( pos, 256 );
 				stringstream stream;
 				stream.str( pos );
@@ -325,6 +339,51 @@ int main()
 				}
 			}
 			break;
+
+            case CALIBRATE_LEFT:
+            {
+                if( !CalibrateLeft() )
+                {
+                    return -1;
+                }
+            }
+            break;
+
+            case CALIBRATE_RIGHT:
+            {
+                if( !CalibrateRight() )
+                {
+                    return -1;
+                }
+            }
+            break;
+
+            case CALIBRATE_LEFT_AND_RIGHT:
+            {
+                if( !CalibrateLeftAndRight() )
+                {
+                    return -1;
+                }
+            }
+            break;
+
+            case GENERATE_3D_ONE_VIEW:
+            {
+                char name[256];
+                std::cout << "Please enter the project name: ";
+                std::cin.getline( name, 256 );
+
+                std::stringstream dir;
+                dir << name << "/";
+                _mkdir( dir.str().c_str() );
+
+                if( !Generate3DForOneView( dir.str() ) )
+                {
+                    return -1;
+                }
+            }
+            break;
+
 			default:
 				break;
         }// switch
@@ -337,22 +396,21 @@ int main()
 //================================================================
 OPERATION MainMenu()
 {
-	system( "CLS" ); // clear prompt command
 	cout << "Choose from the following options:\n";
 	cout << "=============================================================================\n";
-	cout << "[1]: capture calibration patterns for left camera ( Esc to terminate )\n";
-	cout << "[2]: capture calibration patterns for right camera  ( Esc to terminate )\n";
-	cout << "[3]: capture calibration patterns for both left & right camera  ( Esc to terminate )\n";
-	cout << "[4]: calibrate left camera\n";
-	cout << "[5]: calibrate right camera\n";
-	cout << "[6]: calibrate both left & right camera\n";
-	cout << "[7]: Manual Scan one view \n";
-	cout << "[8]: Generate 3D of scanned one view \n";
-	cout << "[9]: Auto Scan with turntable \n";
-	cout << "[10]: Turn table \n";
-	cout << "[11]: Write Config file \n";
-	cout << "[12]: Exit \n\n";
-	cout << "Answer: ";
+	cout << "[1]: capture & calibrate left camera ( Esc to terminate )\n";
+	cout << "[2]: capture & calibrate right camera  ( Esc to terminate )\n";
+	cout << "[3]: capture & calibrate both left & right camera  ( Esc to terminate )\n";
+	cout << "[4]: Manual Scan one view \n";
+	cout << "[5]: Auto Scan with turntable \n";
+	cout << "[6]: Turn table \n";
+	cout << "[7]: Write Config file \n";
+	cout << "[8]: Exit \n\n";
+    // cout << "[4]: calibrate left camera\n"; // obsolete
+    // cout << "[5]: calibrate right camera\n"; // obsolete
+    // cout << "[6]: calibrate both left & right camera\n"; // obsolete
+    // cout << "[8]: Generate 3D of scanned one view \n"; // obsolete
+    cout << "Answer: ";
 
 	char name[256];
 
@@ -956,21 +1014,6 @@ bool OneTurn( const int curDeg, const int speed )
         return false;
     }
 
-    // wait until the turn is done
-	// TODO: this is not working for now
-    /*bool done( false );
-
-    while( !done )
-    {
-        ok = serialPort->ReadSerialPort<BYTE>( message, 1 );
-        if( !ok )
-        {
-            return false;
-        }
-		cout << message[0] << endl;
-
-        done = message[0] == 0x01;
-    }*/
-
     return ok;
 }//OneTurn
+

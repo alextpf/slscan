@@ -102,11 +102,11 @@ void loop()
 #endif
 
     TurnTable.Update(); // internally update
-    /*
+    
     if (TurnTable.GetIsGoalCounter() == 0 )
     {
-      Serial.println(1); // show degree
+      Serial.println("IsDone"); // tell PC we are done
     }
-    */
+    
   }  
 }
