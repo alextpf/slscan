@@ -55,6 +55,13 @@ public:
     {
         m_Path = path;
     }
+
+	void Init()
+	{
+		m_Pattern.clear();
+		m_ShadowMask.clear();
+	}
+
 private:
 
     // convert Gray code to decimal

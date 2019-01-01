@@ -12,6 +12,17 @@ public:
 
     void Scan();
 
+	void Init()
+	{
+		LiveViewProcessor::Init();
+
+		m_InputFileName.clear();
+		m_OutputFileName.clear();
+		m_ImagePoints.clear();
+
+		m_GrayCode.Init();
+	}
+
 	void Generate3D();
 
     int GetNumCaliImgs() const
@@ -55,13 +66,13 @@ public:
         m_GrayCode.SetPath( s );
 	}
 
-	void WriteSingleCamCaliResults();
+	void WriteSingleCamCaliResults( const double err );
 	void ReadSingleCamCaliResults(
 		const string path,
 		cv::Mat& intrinsicMat,
 		cv::Mat& distCoeff );
 
-	void WriteStereoCamCaliResults();
+	void WriteStereoCamCaliResults( const double err );
 	void ReadStereoCamCaliResults(
 		const string path,
 		cv::Mat& R,
@@ -134,7 +145,6 @@ private:
 	vector<string>		m_OutputFileName;
 	string				m_Path;
 	vector<vector<vector<cv::Point2f>>>	    m_ImagePoints; // chessboard corners in 2D img coord; #caliImgs of #source of #corerns in a img
-	vector<vector<cv::Point3f>>	            m_ObjectPoints; // chessboard corners in 3D obj coord
 	cv::Mat				m_IntrinsicMat;
 	cv::Mat				m_DistCoeff;
 	cv::Size			m_ImgSiz;

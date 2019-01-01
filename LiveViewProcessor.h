@@ -38,6 +38,8 @@ public:
     // Constructor setting the default values
     LiveViewProcessor();
 
+	void Init();
+
     // set the name of the video file
     bool SetInput( vector<string> filename /*video names*/ );
 

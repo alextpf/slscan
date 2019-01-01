@@ -303,12 +303,12 @@ void Calibrator::Generate3D()
     plyPath << m_Path << "results.ply";
 
     // don't export wrl. No mesh yet!
-    std::stringstream wrlPath;
-    wrlPath << m_Path << "results.wrl";
+    std::stringstream xyzPath;
+	xyzPath << m_Path << "results.xyz";
 
 	Exporter::ExportToObj( pointcloud, objPath.str() );
 	Exporter::ExportToPly( pointcloud, colors, plyPath.str() );
-    Exporter::SaveXYZAndTexture( pointcloud, textureCoord, wrlPath.str() );
+    Exporter::SaveXYZAndTexture( pointcloud, textureCoord, xyzPath.str() );
 } // Generate3D
 
 //=======================================================================
@@ -538,7 +538,7 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 } // CaptureOptions
 
 //===============================================
-void Calibrator::WriteSingleCamCaliResults()
+void Calibrator::WriteSingleCamCaliResults( const double err )
 {
 	string s = m_Path + "CaliResult.xml";
 	cv::FileStorage fs( s, cv::FileStorage::WRITE );
@@ -546,7 +546,8 @@ void Calibrator::WriteSingleCamCaliResults()
 	fs << "ImageWidth" << m_ImgSiz.width << "ImageHeight" << m_ImgSiz.height
 		<< "IntrinsicMatrix" << m_IntrinsicMat
 		<< "DistortionCoeffs" << m_DistCoeff
-		<< "NumCaliImgs" << m_NumCaliImgs;
+		<< "NumCaliImgs" << m_NumCaliImgs
+		<< "ReprojectionError" << err;
 
 	fs.release();
 }//WriteSingleCamCaliResults
@@ -567,7 +568,7 @@ void Calibrator::ReadSingleCamCaliResults(
 }//ReadSingleCamCaliResults
 
 //===============================================
-void Calibrator::WriteStereoCamCaliResults()
+void Calibrator::WriteStereoCamCaliResults( const double err )
 {
 	string s = m_Path + "StereoCaliResults.xml";
 	cv::FileStorage fs( s, cv::FileStorage::WRITE );
@@ -575,6 +576,7 @@ void Calibrator::WriteStereoCamCaliResults()
 	fs << "T" << m_T;
 	fs << "E" << m_E;
 	fs << "F" << m_F;
+	fs << "reprojectionErr" << err;
 	fs.release();
 }//WriteStereoCamCaliResults
 
@@ -753,7 +755,7 @@ void Calibrator::Calibrate()
 		cout << " *** DONE!\n\nReprojection error is " << err
 			<< "\nStoring caliResult.xml \n\n";
 
-		WriteSingleCamCaliResults();
+		WriteSingleCamCaliResults(err);
 		//
 		// Build the undistort map which we will use for all
 		// subsequent frames.
@@ -767,7 +769,7 @@ void Calibrator::Calibrate()
 		{
 			// read imgs
 			std::stringstream ss;
-			ss << m_Path << m_InputFileName[0] << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+			ss << m_Path << m_InputFileName[0]  << std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
 			cv::Mat orig = cv::imread( ss.str() );
 			cv::Mat undistort;
 
@@ -775,7 +777,9 @@ void Calibrator::Calibrate()
 				cv::BORDER_CONSTANT, cv::Scalar() );
 
 			// save the undistorted imgs
-			WriteImg( m_OutputFileName[0], undistort, i );
+			std::stringstream ss1;
+			ss1 << m_Path << m_OutputFileName[0] << "_undist"<< std::setfill( '0' ) << std::setw( m_Digits ) << i << m_Extension;
+			cv::imwrite( ss1.str(), undistort );
 		} // for i
 	}
 	else
@@ -789,7 +793,7 @@ void Calibrator::Calibrate()
 			imgPts[1].push_back( m_ImagePoints[i][1] ); // right
 		}
 
-		//stereo
+		// stereo
 		// read intrinsic matrix and distortion coeff of both cameras from perviously calibrated results
 		string leftPath = "cali_data/left/";
 		string rightPath = "cali_data/right/";
@@ -799,13 +803,13 @@ void Calibrator::Calibrate()
 		ReadSingleCamCaliResults( leftPath, M1, D1 );
 		ReadSingleCamCaliResults( rightPath, M2, D2 );
 
-		cv::stereoCalibrate(
+		double err = cv::stereoCalibrate(
 			objPt, imgPts[0], imgPts[1], M1, D1, M2, D2, m_ImgSiz, m_R, m_T, m_E, m_F,
 			cv::CALIB_FIX_INTRINSIC,
 			cv::TermCriteria( cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 100,
 				1e-5 ) );
 
-		WriteStereoCamCaliResults();
+		WriteStereoCamCaliResults( err );
 
 		// COMPUTE AND DISPLAY RECTIFICATION
 		//
@@ -813,6 +817,8 @@ void Calibrator::Calibrate()
 
 		if ( showUndistorted )
 		{
+			string undistWinName = "rectified";
+
 			cv::Mat R1, R2, P1, P2, map11, map12, map21, map22;
 
 			// IF BY CALIBRATED (BOUGUET'S METHOD)
@@ -871,8 +877,8 @@ void Calibrator::Calibrate()
 				// image, so the epipolar lines in the rectified
 				// images are vertical. Stereo correspondence
 				// function does not support such a case.
-				bool computerDisp = false;
-				if ( computerDisp )
+				bool computeDisp = false;
+				if ( computeDisp )
 				{
                     cv::Mat disp, vdisp;
 					stereo->compute( img1r, img2r, disp ); // warning: heavy lifting!
@@ -898,15 +904,17 @@ void Calibrator::Calibrate()
 				cv::Mat downSize;
 				cv::resize( pair, downSize, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
 
-				cv::imshow( "rectified", downSize );
+				cv::imshow( undistWinName, downSize );
 
 				// save the image
-				WriteImg( "rectified", pair, i );
+				WriteImg( undistWinName, pair, i );
 
 				cv::waitKey( 1 );
 			}//for ( int i = 0; i < m_NumCaliImgs; i++ )
+			cv::destroyWindow( undistWinName );
+
 		}//if ( showUndistorted )
-	}
+	}//if ( m_NumSource == 2 )
 } // Calibrate
 
 //=====================================================

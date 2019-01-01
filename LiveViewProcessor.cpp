@@ -155,6 +155,7 @@ void LiveViewProcessor::SetInput( const vector<vector<std::string>>& imgs /*sets
         }
     }
     m_Capture.clear();
+	m_ItImg.clear();
 
     for( int i = 0; i < m_NumSource; i++ )
     {
@@ -570,3 +571,20 @@ void LiveViewProcessor::Run()
         }
     }
 } // Run
+
+void LiveViewProcessor::Init()
+{
+	int numSource = static_cast<int>( m_Capture.size() );
+
+	for ( int i = 0; i < numSource; i++ )
+	{
+		m_Capture[i].release();
+	}
+	m_Capture.clear();
+	m_WindowNameInput.clear();
+	m_WindowNameOutput.clear();
+	m_Images.clear();
+	m_ItImg.clear();
+	m_OutputFile.clear();
+	m_CurrentIndex.clear();
+}

@@ -49,10 +49,13 @@ enum OPERATION {
 	TURN_TABLE,
 	WRITE_CONFIG,
 	EXIT,
-    CALIBRATE_LEFT,
-    CALIBRATE_RIGHT,
-    CALIBRATE_LEFT_AND_RIGHT,
-    GENERATE_3D_ONE_VIEW
+	CAPTURE_LEFT, // obselete. still works but hidden right now
+	CAPTURE_RIGHT, // obselete. still works but hidden right now
+	CAPTURE_LEFT_AND_RIGHT, // obselete. still works but hidden right now
+    CALIBRATE_LEFT, // obselete. still works but hidden right now
+    CALIBRATE_RIGHT, // obselete. still works but hidden right now
+    CALIBRATE_LEFT_AND_RIGHT, // obselete. still works but hidden right now
+    GENERATE_3D_ONE_VIEW // obselete. still works but hidden right now
 };
 
 enum SOURCE_TYPE {
@@ -159,6 +162,11 @@ int main()
 					return -1;
 				}
 
+				if ( processor.GetNumCaliImgs() <= 0 )
+				{
+					return true;
+				}
+
                 //calibrate
                 if( !CalibrateLeft() )
                 {
@@ -175,6 +183,11 @@ int main()
 					return -1;
 				}
 
+				if ( processor.GetNumCaliImgs() <= 0 )
+				{
+					return true;
+				}
+
                 //calibrate
                 if( !CalibrateRight() )
                 {
@@ -189,6 +202,11 @@ int main()
 				if ( !CaptureLeftAndRight() )
 				{
 					return -1;
+				}
+
+				if ( processor.GetNumCaliImgs() <= 0 )
+				{
+					return true;
 				}
 
                 //calibrate
@@ -371,6 +389,36 @@ int main()
 			}
 			break;
 
+			case CAPTURE_LEFT:
+			{
+				// capture
+				if ( !CaptureLeft() )
+				{
+					return -1;
+				}
+			}
+			break;
+
+			case CAPTURE_RIGHT:
+			{
+				// capture
+				if ( !CaptureRight() )
+				{
+					return -1;
+				}
+			}
+			break;
+
+			case CAPTURE_LEFT_AND_RIGHT:
+			{
+				// capture
+				if ( !CaptureLeftAndRight() )
+				{
+					return -1;
+				}
+			}
+			break;
+
             case CALIBRATE_LEFT:
             {
                 if( !CalibrateLeft() )
@@ -436,10 +484,14 @@ OPERATION MainMenu()
 	cout << "[6]: Turn table \n";
 	cout << "[7]: Write Config file \n";
 	cout << "[8]: Exit \n\n";
-    // cout << "[4]: calibrate left camera\n"; // obsolete
-    // cout << "[5]: calibrate right camera\n"; // obsolete
-    // cout << "[6]: calibrate both left & right camera\n"; // obsolete
-    // cout << "[8]: Generate 3D of scanned one view \n"; // obsolete
+	cout << "below hidden but still works \n";
+	cout << "( [9]: capture left camera\n"; // obsolete
+	cout << "  [10]: capture right camera\n"; // obsolete
+	cout << "  [11]: capture left & right camera\n"; // obsolete
+    cout << "  [12]: calibrate left camera\n"; // obsolete
+    cout << "  [13]: calibrate right camera\n"; // obsolete
+    cout << "  [14]: calibrate both left & right camera\n"; // obsolete
+    cout << "  [15]: Generate 3D of scanned one view ) \n\n"; // obsolete
     cout << "Answer: ";
 
 	char name[256];
@@ -508,7 +560,7 @@ bool CaptureAndOrCali(
 	vector<LiveViewProcessor::WEB_CAM_ID> webCamId,
     vector<string> title )
 {
-	// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+	processor.Init();
 
 	delay = 1; // ms
 	const bool captureAndCali = false; // capture only, don't cali
@@ -613,7 +665,7 @@ bool Calculate3DPrepare(
 	SOURCE_TYPE outType,
 	vector<string> title )
 {
-	// hit 'c' to capture, 'a' to accept, 'r' to reject, and 'Esc' to terminate
+	processor.Init();
 
 	delay = 1; // ms
 	const int numDigit = 2;
@@ -808,11 +860,6 @@ bool CaptureLeftAndRight()
 //==============================
 bool CalibrateLeft()
 {
-	if ( processor.GetNumCaliImgs() <= 0 )
-	{
-		return true;
-	}
-
     string path = "cali_data/left/";
     if( DirExists( path.c_str() ) != EXISTS )
     {
@@ -824,14 +871,18 @@ bool CalibrateLeft()
 	ids.push_back( LiveViewProcessor::LEFT_CAM );
 	vector<string> title;
 	title.push_back( "Left Cam" );
-	vector<string> fileName;
-	fileName.push_back( "cali_left" );
+
+	vector<string> inFileName;
+	inFileName.push_back( "cali_left" );
+
+	vector<string> outFileName;
+	outFileName.push_back( "cali_left" );
 
 	const bool ok = CaptureAndOrCali(
         path,
         path,
-		fileName, // input name
-		fileName, // output name
+		inFileName, // input name
+		outFileName, // output name
 		IMG,
 		IMG,
 		ids,
@@ -850,11 +901,6 @@ bool CalibrateLeft()
 //=====================
 bool CalibrateRight()
 {
-	if ( processor.GetNumCaliImgs() <= 0 )
-	{
-		return true;
-	}
-
     string path = "cali_data/right/";
     if( DirExists( path.c_str() ) != EXISTS )
     {
@@ -866,14 +912,18 @@ bool CalibrateRight()
 	ids.push_back( LiveViewProcessor::RIGHT_CAM );
 	vector<string> title;
 	title.push_back( "Right Cam" );
-	vector<string> fileName;
-	fileName.push_back( "cali_right" );
+
+	vector<string> inFileName;
+	inFileName.push_back( "cali_right" );
+
+	vector<string> outFileName;
+	outFileName.push_back( "cali_right" );
 
 	const bool ok = CaptureAndOrCali(
         path,
         path,
-		fileName,
-		fileName,
+		inFileName,
+		outFileName,
 		IMG,
 		IMG,
 		ids,
@@ -891,11 +941,6 @@ bool CalibrateRight()
 //============================
 bool CalibrateLeftAndRight()
 {
-	if ( processor.GetNumCaliImgs() <= 0 )
-	{
-		return true;
-	}
-
     string path = "cali_data/leftAndRight/";
     if( DirExists( path.c_str() ) != EXISTS )
     {
@@ -1002,7 +1047,9 @@ bool Generate3DForOneView( string path )
 	title.push_back( "Left Cam" );
 	title.push_back( "Right Cam" );
 
+	processor.Init();
 	processor.SetProjectorDimension( projW, projH );
+
 	if ( !processor.GeneratePattern() )
 	{
 		return false;
