@@ -43,6 +43,66 @@ Calibrator::Calibrator()
 {}
 
 //=======================================================================
+void Calibrator::LiveView()
+{
+	// current frame
+	vector<cv::Mat> frame;
+
+	// output frame
+	vector<cv::Mat> output;
+
+	// if no m_Capture device has been set
+	if ( !IsOpened() )
+	{
+		return;
+	}
+
+	for ( int i = 0; i < m_NumSource; i++ )
+	{
+		frame.push_back( cv::Mat() );
+		output.push_back( cv::Mat() );
+	}
+
+	m_Stop = false;
+	bool ok( true );
+
+	while ( !IsStopped() )
+	{
+		// read next frame if any
+		ok = ok && ReadNextFrame( frame );
+		if ( !ok )
+		{
+			break;
+		}
+
+		DisplayFrame( m_WindowNameInput, frame );
+
+		output = frame;
+
+		DisplayFrame( m_WindowNameOutput, output );
+
+		// check if we should stop
+		if ( m_FrameToStop >= 0 && GetFrameNumber() == m_FrameToStop )
+		{
+			StopIt();
+		}
+		int key = cv::waitKey( 1 );
+		if ( key == 27 )
+		{
+			StopIt();
+		}
+	} // while ( !IsStopped() )
+
+	// after all the images are processed
+	// close window
+	for ( int i = 0; i < m_NumSource; i++ )
+	{
+		cv::destroyWindow( m_WindowNameOutput[i] );
+	}
+
+} // LiveView
+
+//=======================================================================
 void Calibrator::CaptureAndClibrate()
 {
 	// current frame
@@ -78,7 +138,10 @@ void Calibrator::CaptureAndClibrate()
         DisplayFrame( m_WindowNameInput, frame );
 
 		// check whether capture or start calibration
-		CaptureOptions( frame, output );
+		if ( !CaptureOptions( frame, output ) )
+		{
+			return;
+		}
 
 		output = frame;
 
@@ -461,7 +524,7 @@ void Calibrator::Scan()
 }//Scan
 
 //=======================================================================
-void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output )
+bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output )
 {
 	m_ImgSiz = frame[0].size();
 
@@ -472,8 +535,8 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
         const bool writeImg = false;
         if( !FindChessboard( frame, writeImg ) )
         {
-            cout << "can't find chessboard/n";
-            return;
+            cout << "can't find chessboard\n";
+            return false;
         }
 
         if( m_ItImg[0] == m_Images[0].end() )
@@ -498,8 +561,8 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
                 const bool writeImg = true;
                 if( !FindChessboard( frame, writeImg ) )
                 {
-                    cout << "can't find chessboard/n";
-                    return;
+                    cout << "can't find chessboard\n";
+                    return false;
                 }
             }//if ( m_CaptureAndCali )
             else
@@ -535,6 +598,7 @@ void Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
 		}
 	} // if ( !m_DoCali )
 
+	return true;
 } // CaptureOptions
 
 //===============================================

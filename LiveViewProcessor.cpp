@@ -195,7 +195,6 @@ bool LiveViewProcessor::SetOutput(
     // number of m_Digits in the file numbering scheme
     m_Digits = numberOfDigits;
 
-
 	return true;
 }
 

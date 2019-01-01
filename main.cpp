@@ -41,7 +41,8 @@ using namespace std;
 
 //======================================
 enum OPERATION {
-	CAPTURE_CALI_LEFT = 1,
+	LIVE_VIEW = 1,
+	CAPTURE_CALI_LEFT,
 	CAPTURE_CALI_RIGHT,
 	CAPTURE_CALI_LEFT_AND_RIGHT,
 	MANUAL_SCAN_ONE_VIEW,
@@ -73,6 +74,7 @@ enum DIR_STATUS {
 //======================================
 //fwd declare
 //void TestPcl();
+bool LiveView();
 OPERATION MainMenu();
 void WriteConfig();
 void ReadConfig();
@@ -151,6 +153,11 @@ int main()
 			case WRITE_CONFIG:
 			{
 				WriteConfig();
+			}
+			break;
+			case LIVE_VIEW:
+			{
+				LiveView();
 			}
 			break;
 
@@ -476,22 +483,23 @@ OPERATION MainMenu()
 {
 	cout << "Choose from the following options:\n";
 	cout << "=============================================================================\n";
-	cout << "[1]: capture & calibrate left camera ( Esc to terminate )\n";
-	cout << "[2]: capture & calibrate right camera  ( Esc to terminate )\n";
-	cout << "[3]: capture & calibrate both left & right camera  ( Esc to terminate )\n";
-	cout << "[4]: Manual Scan one view \n";
-	cout << "[5]: Auto Scan with turntable \n";
-	cout << "[6]: Turn table \n";
-	cout << "[7]: Write Config file \n";
-	cout << "[8]: Exit \n\n";
+	cout << "[1]: Live View\n";
+	cout << "[2]: capture & calibrate left camera ( Esc to terminate )\n";
+	cout << "[3]: capture & calibrate right camera  ( Esc to terminate )\n";
+	cout << "[4]: capture & calibrate both left & right camera  ( Esc to terminate )\n";
+	cout << "[5]: Manual Scan one view \n";
+	cout << "[6]: Auto Scan with turntable \n";
+	cout << "[7]: Turn table \n";
+	cout << "[8]: Write Config file \n";
+	cout << "[9]: Exit \n\n";
 	cout << "below hidden but still works \n";
-	cout << "( [9]: capture left camera\n"; // obsolete
-	cout << "  [10]: capture right camera\n"; // obsolete
-	cout << "  [11]: capture left & right camera\n"; // obsolete
-    cout << "  [12]: calibrate left camera\n"; // obsolete
-    cout << "  [13]: calibrate right camera\n"; // obsolete
-    cout << "  [14]: calibrate both left & right camera\n"; // obsolete
-    cout << "  [15]: Generate 3D of scanned one view ) \n\n"; // obsolete
+	cout << "( [10]: capture left camera\n"; // obsolete
+	cout << "  [11]: capture right camera\n"; // obsolete
+	cout << "  [12]: capture left & right camera\n"; // obsolete
+    cout << "  [13]: calibrate left camera\n"; // obsolete
+    cout << "  [14]: calibrate right camera\n"; // obsolete
+    cout << "  [15]: calibrate both left & right camera\n"; // obsolete
+    cout << "  [16]: Generate 3D of scanned one view ) \n\n"; // obsolete
     cout << "Answer: ";
 
 	char name[256];
@@ -628,7 +636,7 @@ bool CaptureAndOrCali(
 		break;
 	}//switch inputtype
 
-	switch ( outputType )
+	switch ( outType )
 	{
 	case IMG:
 	{
@@ -710,8 +718,6 @@ bool Calculate3DPrepare(
 		processor.SetInput( imgs );
 	} // case IMG
 	break;
-	break;
-
 	default:
 		break;
 	}//switch inputtype
@@ -856,6 +862,37 @@ bool CaptureLeftAndRight()
 	processor.CaptureAndClibrate();
 	return true;
 }//CaptureLeftAndRight
+
+//-=================================
+bool LiveView()
+{
+	vector<LiveViewProcessor::WEB_CAM_ID> ids;
+	//ids.push_back( LiveViewProcessor::DEFAULT_CAM );
+	ids.push_back( LiveViewProcessor::LEFT_CAM );
+	ids.push_back( LiveViewProcessor::RIGHT_CAM );
+
+	vector<string> title;
+	title.push_back( "Left Cam" );
+	title.push_back( "Right Cam" );
+	vector<string> name;
+	const bool ok = CaptureAndOrCali(
+		"",
+		"",
+		name,
+		name,
+		WEBCAM,
+		NONE,
+		ids,
+		title );
+	if ( !ok )
+	{
+		return false;
+	}
+
+	// Start the Process
+	processor.LiveView();
+	return true;
+}//LiveView
 
 //==============================
 bool CalibrateLeft()

@@ -10,6 +10,8 @@ public:
 
 	void CaptureAndClibrate();
 
+	void LiveView();
+
     void Scan();
 
 	void Init()
@@ -19,6 +21,7 @@ public:
 		m_InputFileName.clear();
 		m_OutputFileName.clear();
 		m_ImagePoints.clear();
+		SetDoCali( false );
 
 		m_GrayCode.Init();
 	}
@@ -135,7 +138,7 @@ private:
 
     void DisplayFrame( const vector<string>& winName, const vector<cv::Mat>& output );
 
-	void CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
+	bool CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output );
 
 	int					m_NumCaliImgs;
 	int					m_CalibPatternWidth; // number of column of inner corners
