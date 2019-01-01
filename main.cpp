@@ -722,7 +722,7 @@ bool Calculate3DPrepare(
 		break;
 	}//switch inputtype
 
-	switch ( outputType )
+	switch ( outType )
 	{
 	case IMG:
 	{
