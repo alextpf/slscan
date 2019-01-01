@@ -173,7 +173,7 @@ void GrayCode::GenerateShadowMask(
 	int shadowCount = 0;
 	int nonShadowCount = 0;
 
-	bool loadFromSaved = true;
+	bool loadFromSaved = false;
 
     int reportFreq = m_ImgHeight / 10;
 
@@ -319,7 +319,7 @@ bool GrayCode::Decode(
     std::stringstream rightPath;
     rightPath << m_Path << "rightCamMap.txt";
 
-	bool loadFromSavedMap = true;
+	bool loadFromSavedMap = false;
 	if ( loadFromSavedMap )
 	{
 		std::ifstream logLeftCam;
@@ -443,7 +443,7 @@ bool GrayCode::Decode(
 	bool showMatched = false;
 	bool saveDisp = true;
 
-	bool loadDisp = true;
+	bool loadDisp = false;
 
     std::stringstream dispPath;
     dispPath << m_Path << "Disparity.txt";

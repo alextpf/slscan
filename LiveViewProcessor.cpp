@@ -92,6 +92,7 @@ bool LiveViewProcessor::SetInput( vector<std::string> filename /*of video*/ )
 		// Open the video file
 		ok = ok && m_Capture[i].open( filename[i] );
 	}
+	m_Images.clear();
 
 	return ok;
 }
@@ -175,6 +176,9 @@ bool LiveViewProcessor::SetOutput(
     {
         return false;
     }
+
+	//reset first
+	m_OutputFile.clear();
 
     // filenames and their common m_Extension
     for( int i = 0; i < m_NumSource; i++ )

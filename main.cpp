@@ -5,8 +5,13 @@
 // note:
 // - object has to be located at ~ m from the projector (mine is a VANKYO Leisure 510 )
 // - the extented screen (for the projector) has to be set at the resolution of 1280 x 768, with no scaling
-// - the scanner has a depth of XX m, and width, height of XX m
+// - the scanner has a depth of 58.5''+-4'', and width, height of XX m
 // - to run off auto focus of Logitech Webcam C920, download its LogiCameraSettings_2.5.17.exe or LGS to run it off
+// - for PCL, download pre-compiled version, ex: PCL-1.8.1-AllInOne-msvc2015-win64 ,from
+//   https://github.com/PointCloudLibrary/pcl/releases
+//   the 3rd party will then be installed in C:\Program Files\PCL 1.8.1\3rdParty
+//   we will just need to add "include", "lib" to project path, and "bin" to env var "path";
+//   *.dlls to the additional dependancies
 //========================================================
 #include <iostream>
 #include <string>
@@ -23,7 +28,7 @@
 #include <opencv2/imgproc.hpp>
 
 // PCL
-#include <pcl/io/pcd_io.h>
+//#include <pcl/io/pcd_io.h>
 //#include <pcl/point_types.h>
 //#include <pcl/registration/icp.h>
 
@@ -64,6 +69,7 @@ enum DIR_STATUS {
 };
 //======================================
 //fwd declare
+//void TestPcl();
 OPERATION MainMenu();
 void WriteConfig();
 void ReadConfig();
@@ -126,6 +132,8 @@ shared_ptr<SerialPort> serialPort;
 //========================================
 int main()
 {
+	/*TestPcl();
+	return -1;*/
 	//====================================
 	//////////////////////
 	// Read from config
@@ -265,21 +273,25 @@ int main()
                         return -1;
                     }
 
-                    // wait until the turn is done
-                    // TODO: this is not working for now??
-                    bool done( false );
-                    string isDone = "IsDone";
-                    while( !done )
-                    {
-                        char data[256];
-                        int bytesRead = serialPort->ReadSerialPort<char>( data, 256 );
-                        if( bytesRead > 0 )
-                        {
-                            done = data == isDone;
-                            //debug
-                            cout << data << endl;
-                        }
-                    }
+
+					// pause some time for the table to start turning
+					cv::waitKey( 1500 );
+
+					// wait until the turn is done
+					// TODO: this is not working for now??
+					bool done( false );
+					string isDone = "IsDone";
+					while ( !done )
+					{
+						char data[7];
+						int bytesRead = serialPort->ReadSerialPort<char>( data, 7 );
+						if ( bytesRead > 0 )
+						{
+							done = true;
+							//debug
+							cout << data << endl;
+						}
+					}
 
                     // alternative method; blindly wait for some period
 					//cv::waitKey(duration);
@@ -337,6 +349,25 @@ int main()
 					cout << "turn error\n";
 					return -1;
 				}
+
+				// pause some time for the table to start turning
+				cv::waitKey(2000);
+
+				// wait until the turn is done
+				// TODO: this is not working for now??
+				bool done( false );
+				string isDone = "IsDone";
+				while ( !done )
+				{
+					char data[7];
+					int bytesRead = serialPort->ReadSerialPort<char>( data, 7 );
+					if ( bytesRead > 0 )
+					{
+						done = true;
+						//debug
+						cout << data << endl;
+					}
+				}
 			}
 			break;
 
@@ -375,7 +406,6 @@ int main()
 
                 std::stringstream dir;
                 dir << name << "/";
-                _mkdir( dir.str().c_str() );
 
                 if( !Generate3DForOneView( dir.str() ) )
                 {
@@ -429,9 +459,9 @@ void WriteConfig()
 	float block_size = 50.0f; //mm
     int projectorWidth = 1280; // VANKYO Leisure 510
     int projectorHeight = 768;
-    int com = 4; // com port
-    int speed = 50; // speed
-	int duration = 5000;//ms
+    int com = 6; // com port
+    int speed = 1500; // speed
+	int duration = 1500;//ms
 
 	cv::FileStorage fs( "config.xml", cv::FileStorage::WRITE );
     fs << "board_width" << board_width << "board_height" << board_height
@@ -666,8 +696,11 @@ bool Calculate3DPrepare(
 //===========================
 bool CaptureLeft()
 {
-    string path = "cali_data/left/";
-    _mkdir( path.c_str() );
+    string path0 = "cali_data";
+    _mkdir( path0.c_str() );
+
+	string path = "cali_data/left/";
+	_mkdir( path.c_str() );
 
 	vector<LiveViewProcessor::WEB_CAM_ID> ids;
 	ids.push_back( LiveViewProcessor::LEFT_CAM );
@@ -699,6 +732,9 @@ bool CaptureLeft()
 //==========================
 bool CaptureRight()
 {
+	string path0 = "cali_data";
+	_mkdir( path0.c_str() );
+
     string path = "cali_data/right/";
     _mkdir( path.c_str() );
 
@@ -732,6 +768,9 @@ bool CaptureRight()
 //=====================
 bool CaptureLeftAndRight()
 {
+	string path0 = "cali_data";
+	_mkdir( path0.c_str() );
+
     string path = "cali_data/leftAndRight/";
     _mkdir( path.c_str() );
 
@@ -769,6 +808,11 @@ bool CaptureLeftAndRight()
 //==============================
 bool CalibrateLeft()
 {
+	if ( processor.GetNumCaliImgs() <= 0 )
+	{
+		return true;
+	}
+
     string path = "cali_data/left/";
     if( DirExists( path.c_str() ) != EXISTS )
     {
@@ -806,6 +850,11 @@ bool CalibrateLeft()
 //=====================
 bool CalibrateRight()
 {
+	if ( processor.GetNumCaliImgs() <= 0 )
+	{
+		return true;
+	}
+
     string path = "cali_data/right/";
     if( DirExists( path.c_str() ) != EXISTS )
     {
@@ -842,6 +891,11 @@ bool CalibrateRight()
 //============================
 bool CalibrateLeftAndRight()
 {
+	if ( processor.GetNumCaliImgs() <= 0 )
+	{
+		return true;
+	}
+
     string path = "cali_data/leftAndRight/";
     if( DirExists( path.c_str() ) != EXISTS )
     {
@@ -1017,3 +1071,27 @@ bool OneTurn( const int curDeg, const int speed )
     return ok;
 }//OneTurn
 
+//void TestPcl()
+//{
+//	pcl::PointCloud<pcl::PointXYZ> cloud;
+//
+//	// Fill in the cloud data
+//	cloud.width = 5;
+//	cloud.height = 1;
+//	cloud.is_dense = false;
+//	cloud.points.resize( cloud.width * cloud.height );
+//
+//	for ( size_t i = 0; i < cloud.points.size(); ++i )
+//	{
+//		cloud.points[i].x = 1024 * rand() / ( RAND_MAX + 1.0f );
+//		cloud.points[i].y = 1024 * rand() / ( RAND_MAX + 1.0f );
+//		cloud.points[i].z = 1024 * rand() / ( RAND_MAX + 1.0f );
+//	}
+//
+//	pcl::io::savePCDFileASCII( "test_pcd.pcd", cloud );
+//	std::cerr << "Saved " << cloud.points.size() << " data points to test_pcd.pcd." << std::endl;
+//
+//	for ( size_t i = 0; i < cloud.points.size(); ++i )
+//		std::cerr << "    " << cloud.points[i].x << " " << cloud.points[i].y << " " << cloud.points[i].z << std::endl;
+//
+//}

@@ -226,7 +226,7 @@ void Calibrator::Generate3D()
 			WriteNextFrame( output );
 		}
 
-		if ( false )
+		if ( true )
 		{
 			DisplayAndSaveComposite( rectifyWinName, tmpLeft/*8UC3*/, tmpRight );
 		}
