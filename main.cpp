@@ -118,8 +118,6 @@ char outPath[256];
 char filename[256];
 LiveViewProcessor::WEB_CAM_ID webCamId( LiveViewProcessor::DEFAULT_CAM ); // 0: default (laptop's camera), 1: external connected cam
 
-SOURCE_TYPE inputType( WEBCAM ); // 0: imgs, 1: video, 2: webcam
-SOURCE_TYPE outputType( IMG ); // 0: imgs, 1: video, 2: webcam
 int delay( 0 );
 bool showOutputImg( false );
 bool showInputImg( false );
@@ -634,7 +632,7 @@ bool CaptureAndOrCali(
 
 	default:
 		break;
-	}//switch inputtype
+	}//switch intype
 
 	switch ( outType )
 	{
@@ -658,7 +656,7 @@ bool CaptureAndOrCali(
 
 	default:
 		break;
-	}//switch ( outputType )
+	}//switch ( outType )
 
 	return true;
 }//CaptureAndOrCali
@@ -720,7 +718,7 @@ bool Calculate3DPrepare(
 	break;
 	default:
 		break;
-	}//switch inputtype
+	}//switch inType
 
 	switch ( outType )
 	{
@@ -744,7 +742,7 @@ bool Calculate3DPrepare(
 
 	default:
 		break;
-	}//switch ( outputType )
+	}//switch ( outType )
 
 	processor.Generate3D();
 
