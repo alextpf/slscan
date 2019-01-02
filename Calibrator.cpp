@@ -283,12 +283,6 @@ void Calibrator::Generate3D()
 			DisplayFrame( m_WindowNameOutput, output );
 		}
 
-		// write output sequence
-		if ( m_OutputFile[0].length() != 0 )
-		{
-			WriteNextFrame( output );
-		}
-
 		if ( true )
 		{
 			DisplayAndSaveComposite( rectifyWinName, tmpLeft/*8UC3*/, tmpRight );
@@ -441,12 +435,6 @@ void Calibrator::Scan()
 	cv::moveWindow( m_ProjWinName, mainScrnWidth, yOffset );
 	cv::setWindowProperty( m_ProjWinName, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN );
 
-	for ( int i = 0; i < m_NumSource; i++ )
-	{
-		// Turning off autofocus
-		m_Capture[i].set( cv::CAP_PROP_SETTINGS, 1 );
-	}
-
 	const vector<cv::Mat>& pattern = m_GrayCode.GetPattern();
 
     int patSiz = static_cast<int>( pattern.size() );
@@ -536,7 +524,6 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
         if( !FindChessboard( frame, writeImg ) )
         {
             cout << "can't find chessboard\n";
-            return false;
         }
 
         if( m_ItImg[0] == m_Images[0].end() )
@@ -562,8 +549,9 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
                 if( !FindChessboard( frame, writeImg ) )
                 {
                     cout << "can't find chessboard\n";
-                    return false;
                 }
+
+				m_NumCaliImgs++;
             }//if ( m_CaptureAndCali )
             else
             {
@@ -572,9 +560,8 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
                     WriteImg( m_OutputFileName[i], frame[i], m_NumCaliImgs );
                 }
 
+				m_NumCaliImgs++;
             }//if ( m_CaptureAndCali )
-
-            m_NumCaliImgs++;
 		}
 		else if ( ret == 27/*ESC*/ )
 		{
@@ -869,7 +856,7 @@ void Calibrator::Calibrate()
 
 		double err = cv::stereoCalibrate(
 			objPt, imgPts[0], imgPts[1], M1, D1, M2, D2, m_ImgSiz, m_R, m_T, m_E, m_F,
-			cv::CALIB_FIX_INTRINSIC,
+			cv::CALIB_FIX_INTRINSIC/*cv::CALIB_USE_INTRINSIC_GUESS*/,
 			cv::TermCriteria( cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 100,
 				1e-5 ) );
 
@@ -1058,6 +1045,8 @@ void Calibrator::DisplayAndSaveComposite(
 
 	// save the image
 	WriteImg( rectifyWinName, pair, m_CurrentIndex[0] - 1 );
+	m_CurrentIndex[0]++;
+
 	//================================================
 	cv::waitKey( m_Delay );
 

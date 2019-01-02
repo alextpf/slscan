@@ -5,7 +5,7 @@
 // note:
 // - object has to be located at ~ m from the projector (mine is a VANKYO Leisure 510 )
 // - the extented screen (for the projector) has to be set at the resolution of 1280 x 768, with no scaling
-// - the scanner has a depth of 58.5''+-4'', and width, height of XX m
+// - the scanner has a depth of 56"+-3", and width, height of XX m
 // - to run off auto focus of Logitech Webcam C920, download its LogiCameraSettings_2.5.17.exe or LGS to run it off
 // - for PCL, download pre-compiled version, ex: PCL-1.8.1-AllInOne-msvc2015-win64 ,from
 //   https://github.com/PointCloudLibrary/pcl/releases
@@ -273,7 +273,7 @@ int main()
 				}
 
                 int fullCircle = 360; // degree, full circle
-                int delta = 30; // one turn
+                int delta = 20; // one turn
                 int steps = fullCircle / delta;
 
 				// each step capture
@@ -296,9 +296,8 @@ int main()
                         return -1;
                     }
 
-
 					// pause some time for the table to start turning
-					cv::waitKey( 1500 );
+					//cv::waitKey( 0 );
 
 					// wait until the turn is done
 					// TODO: this is not working for now??
@@ -319,21 +318,20 @@ int main()
                     // alternative method; blindly wait for some period
 					//cv::waitKey(duration);
 
-
 				}//for i
 
-				// now generate
-                for( int i = 0, curDeg = 0; i < steps; ++i, curDeg += delta )
-                {
-                    cout << "Generating " << i + 1 << "/" << steps << " view ... \n";
+				//// now generate
+    //            for( int i = 0, curDeg = 0; i < steps; ++i, curDeg += delta )
+    //            {
+    //                cout << "Generating " << i + 1 << "/" << steps << " view ... \n";
 
-					std::stringstream dir;
-					dir << name << curDeg << "/";
-					if ( !Generate3DForOneView( dir.str() ) )
-					{
-						return -1;
-					}
-				}//for i
+				//	std::stringstream dir;
+				//	dir << name << curDeg << "/";
+				//	if ( !Generate3DForOneView( dir.str() ) )
+				//	{
+				//		return -1;
+				//	}
+				//}//for i
 			}
 			break;
 
@@ -765,6 +763,8 @@ bool CaptureLeft()
 	vector<string> fileName;
 	fileName.push_back( "cali_left" );
 
+	processor.SetNumCaliImgs( 0 );// reset
+
 	const bool ok = CaptureAndOrCali(
         path,
         path,
@@ -800,6 +800,8 @@ bool CaptureRight()
 	title.push_back( "Right Cam" );
 	vector<string> fileName;
 	fileName.push_back( "cali_right" );
+
+	processor.SetNumCaliImgs( 0 );// reset
 
 	const bool ok = CaptureAndOrCali(
         path,
@@ -841,6 +843,8 @@ bool CaptureLeftAndRight()
 	vector<string> fileName;
 	fileName.push_back( "cali_left" );
 	fileName.push_back( "cali_right" );
+
+	processor.SetNumCaliImgs( 0 );// reset
 
 	const bool ok = CaptureAndOrCali(
 		path,
@@ -1096,7 +1100,7 @@ bool Generate3DForOneView( string path )
 		inputFileName,
 		outputFileName,
 		IMG,
-		NONE,
+		IMG,
 		title );
 
 	return ok;

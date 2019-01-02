@@ -36,6 +36,9 @@ bool GrayCode::GeneratePattern()
 		return false;
 	}
 
+	// init
+	m_Pattern.clear();
+
 	// allocate
 	for ( int i = 0; i < m_NumPatternImgs; i++ )
 	{
@@ -160,6 +163,8 @@ void GrayCode::GenerateShadowMask(
 	const vector<cv::Mat>& whiteImg,
 	const vector<cv::Mat>& blackImg )
 {
+	m_ShadowMask.clear();
+
     const int numSrc = 2;
 
     // allocate space
@@ -564,39 +569,51 @@ bool GrayCode::Decode(
 						}
 
 						// evaluate the legit of the found pix
-						if ( row == r &&
-							 col > marker/* "continuity constraint" */ &&
-							 col < rightLimit /* "parallell constraint" */ )
+						int thresh = 20; // exact will 0
+						bool found = false;
+
+						for ( int m = 0; m <= thresh; ++m )
 						{
-							if ( showMatched )
+							if ( abs( row - r ) <= m &&
+								col > marker/* "continuity constraint" */ &&
+								col < rightLimit /* "parallell constraint" */ )
 							{
-								int off = 2;
-								int thick = 2;
+								if ( showMatched )
+								{
+									int off = 2;
+									int thick = 2;
 
-								cv::Mat tmpLeft = leftImg.clone();
-								cv::Point p1( c * s - off, r * s - off );
-								cv::Point p2( c * s + off, r * s + off );
-								cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
-								cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
+									cv::Mat tmpLeft = leftImg.clone();
+									cv::Point p1( c * s - off, r * s - off );
+									cv::Point p2( c * s + off, r * s + off );
+									cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
+									cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
 
-								cv::imshow( leftName, tmpLeft );
-								cv::moveWindow( leftName, 0, 0 );
-								cv::waitKey( 1 );
+									cv::imshow( leftName, tmpLeft );
+									cv::moveWindow( leftName, 0, 0 );
+									cv::waitKey( 1 );
 
-								cv::Mat tmpRight = rightImg.clone();
-								cv::Point p3( col * s - off, row * s - off );
-								cv::Point p4( col * s + off, row * s + off );
-								cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
-								cv::rectangle( tmpRight, p3, p4, GREEN, thick );
+									cv::Mat tmpRight = rightImg.clone();
+									cv::Point p3( col * s - off, row * s - off );
+									cv::Point p4( col * s + off, row * s + off );
+									cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
+									cv::rectangle( tmpRight, p3, p4, GREEN, thick );
 
-								cv::imshow( rightName, tmpRight );
-								cv::moveWindow( rightName, 755, 0 );
-								cv::waitKey( 1 );
+									cv::imshow( rightName, tmpRight );
+									cv::moveWindow( rightName, 755, 0 );
+									cv::waitKey( 1 );
+								}
+
+								ok = true;
+								marker = col;
+								numMatchedPts++;
+								found = true;
+								break;
 							}
+						}//for m
 
-							ok = true;
-							marker = col;
-							numMatchedPts++;
+						if ( found )
+						{
 							break;
 						}
 					}// for

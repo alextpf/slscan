@@ -22,8 +22,6 @@ public:
 		m_OutputFileName.clear();
 		m_ImagePoints.clear();
 		SetDoCali( false );
-
-		m_GrayCode.Init();
 	}
 
 	void Generate3D();
