@@ -49,6 +49,7 @@ enum OPERATION {
 	AUTO_SCAN,
 	TURN_TABLE,
 	WRITE_CONFIG,
+    REGENERATE_PLY_WITH_TEXTURE,
 	EXIT,
 	CAPTURE_LEFT, // obselete. still works but hidden right now
 	CAPTURE_RIGHT, // obselete. still works but hidden right now
@@ -56,7 +57,8 @@ enum OPERATION {
     CALIBRATE_LEFT, // obselete. still works but hidden right now
     CALIBRATE_RIGHT, // obselete. still works but hidden right now
     CALIBRATE_LEFT_AND_RIGHT, // obselete. still works but hidden right now
-    GENERATE_3D_ONE_VIEW // obselete. still works but hidden right now
+    GENERATE_3D_ONE_VIEW, // obselete. still works but hidden right now
+    AUTO_GENERATE_3D_VIEWS
 };
 
 enum SOURCE_TYPE {
@@ -335,6 +337,41 @@ int main()
 			}
 			break;
 
+            case AUTO_GENERATE_3D_VIEWS:
+            {
+                char name[256];
+
+                std::cout << "Please enter the project name: ";
+                std::cin.getline( name, 256 );
+
+                int fullCircle = 360; // degree, full circle
+                int delta = 20; // one turn
+                int steps = fullCircle / delta;
+
+                // now generate
+                for( int i = 0, curDeg = 0; i < steps; ++i, curDeg += delta )
+                {
+                    cout << "Generating " << i + 1 << "/" << steps << " view ... \n";
+
+                    std::stringstream dir;
+                    dir << "data/" << name << curDeg << "/";
+                    if( !Generate3DForOneView( dir.str() ) )
+                    {
+                        return -1;
+                    }
+                }//for i
+            }
+            break;
+
+            case REGENERATE_PLY_WITH_TEXTURE:
+            {
+                string xyz = "scan_data/results.xyz";
+                string texture = "scan_data/texture.jpg";
+                string ply = "scan_data/newResult.ply";
+                Exporter::GeneratePlyFromXYZ( xyz, texture, ply );
+            }
+            break;
+
 			case TURN_TABLE:
 			{
 				char pos[256];
@@ -487,15 +524,18 @@ OPERATION MainMenu()
 	cout << "[6]: Auto Scan with turntable \n";
 	cout << "[7]: Turn table \n";
 	cout << "[8]: Write Config file \n";
-	cout << "[9]: Exit \n\n";
+    cout << "[9]: Regenerate Ply with texture file \n";
+	cout << "[10]: Exit \n\n";
 	cout << "below hidden but still works \n";
-	cout << "( [10]: capture left camera\n"; // obsolete
-	cout << "  [11]: capture right camera\n"; // obsolete
-	cout << "  [12]: capture left & right camera\n"; // obsolete
-    cout << "  [13]: calibrate left camera\n"; // obsolete
-    cout << "  [14]: calibrate right camera\n"; // obsolete
-    cout << "  [15]: calibrate both left & right camera\n"; // obsolete
-    cout << "  [16]: Generate 3D of scanned one view ) \n\n"; // obsolete
+	cout << "( [11]: capture left camera\n"; // obsolete
+	cout << "  [12]: capture right camera\n"; // obsolete
+	cout << "  [13]: capture left & right camera\n"; // obsolete
+    cout << "  [14]: calibrate left camera\n"; // obsolete
+    cout << "  [15]: calibrate right camera\n"; // obsolete
+    cout << "  [16]: calibrate both left & right camera\n"; // obsolete
+    cout << "  [17]: Generate 3D of scanned one view ) \n"; // obsolete
+    cout << "  [18]: Auto-generate 3D of scanned views ) \n\n";
+
     cout << "Answer: ";
 
 	char name[256];

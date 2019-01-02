@@ -28,6 +28,9 @@ public:
         const vector<cv::Point3d>& pts,
         const vector<cv::Vec2f>& textureCoord,
         string path );
-
+    static void GeneratePlyFromXYZ(
+        const string xyz,
+        const string texture,
+        const string ply );
 private:
 }; // Exporter

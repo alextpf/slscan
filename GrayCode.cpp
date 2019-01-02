@@ -569,7 +569,7 @@ bool GrayCode::Decode(
 						}
 
 						// evaluate the legit of the found pix
-						int thresh = 20; // exact will 0
+						int thresh = 10; // exact will 0
 						bool found = false;
 
 						for ( int m = 0; m <= thresh; ++m )

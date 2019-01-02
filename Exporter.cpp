@@ -145,3 +145,84 @@ void Exporter::SaveXYZAndTexture(
     std::cout << "done!\n";
 }//SaveXYZAndTexture
 
+//==========================
+void Exporter::GeneratePlyFromXYZ(
+    const string xyz,
+    const string texture,
+    const string ply )
+{
+    std::ifstream xyzFile;
+    xyzFile.open( xyz.c_str(), std::ifstream::in );
+
+    cv::Mat tex = cv::imread( texture.c_str() );
+
+    cv::Size siz = tex.size();
+
+    string line;
+
+    vector<cv::Point3d> ptXYZ;
+    vector<cv::Point3i> ptRGB;
+
+    while( getline( xyzFile, line ) )
+    {
+        cv::Point3d XYZ;
+        stringstream pts;
+        pts.str( line );
+        pts >> XYZ.x;
+        pts >> XYZ.y;
+        pts >> XYZ.z;
+
+        ptXYZ.push_back( XYZ );
+
+        getline( xyzFile, line );
+        stringstream st;
+        float s, t;
+
+        st.str( line );
+        st >> s;
+        st >> t;
+
+        int row = static_cast<int>( ( 1.0f - t ) * static_cast<float>( siz.height ) + 0.5f );
+        int col = static_cast<int>( s * static_cast<float>( siz.width ) + 0.5f );
+
+        cv::Point3i RGB;
+        RGB.x = int( tex.at<cv::Vec3b>( row, col )[2] );// r
+        RGB.y = int( tex.at<cv::Vec3b>( row, col )[1] );// g
+        RGB.z = int( tex.at<cv::Vec3b>( row, col )[0] );// b
+
+        ptRGB.push_back( RGB );
+    }
+    xyzFile.close();
+
+    const int numPts = int( ptXYZ.size() );
+    //
+
+    std::ofstream out;
+    out.open( ply.c_str() );
+
+    //ply headers
+    out << "ply\n";
+    out << "format ascii 1.0\n";
+
+    out << "element vertex " << numPts << "\n";
+    out << "property float x\n";
+    out << "property float y\n";
+    out << "property float z\n";
+
+    out << "property uchar red\n";
+    out << "property uchar green\n";
+    out << "property uchar blue\n";
+    out << "end_header\n";
+
+    std::cout << "Export " << ply << "...";
+
+    for( int i = 0; i < numPts; i++ )
+    {
+        out << ptXYZ[i].x << " " << ptXYZ[i].y << " " << ptXYZ[i].z << "\n";
+        out << ptRGB[i].x << " " << ptRGB[i].y << " " << ptRGB[i].z << "\n";
+    }
+
+    out.close();
+    std::cout << "done!\n";
+
+}//GeneratePlyFromXYZ
