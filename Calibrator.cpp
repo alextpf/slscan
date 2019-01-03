@@ -169,7 +169,7 @@ void Calibrator::CaptureAndClibrate()
 } // CaptureAndClibrate
 
 //=======================================================================
-void Calibrator::Generate3D()
+void Calibrator::Generate3D( const bool debug )
 {
 	// read calibration result of each camera
 	string leftPath = "cali_data/left/";
@@ -278,7 +278,7 @@ void Calibrator::Generate3D()
 		left.push_back( output[0].clone() ); // left
 		right.push_back( output[1].clone() ); // right
 
-		if ( true )//no need to individually display rectified imgs
+		if ( false )//no need to individually display rectified imgs
 		{
 			DisplayFrame( m_WindowNameOutput, output );
 		}
@@ -342,7 +342,7 @@ void Calibrator::Generate3D()
 	captured.push_back( right );
 
 	//restructure captured such that its size is like 2 (left & right) x NumPatternImgs x images
-	m_GrayCode.Decode( captured, white/*8UC1*/, black );
+	m_GrayCode.Decode( captured, white/*8UC1*/, black, debug );
 
 	vector<cv::Point3d> pointcloud;
 	vector<cv::Point3i> colors;
@@ -523,7 +523,8 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
         const bool writeImg = false;
         if( !FindChessboard( frame, writeImg ) )
         {
-            cout << "can't find chessboard\n";
+            cout << *( m_ItImg[0] ) << ": can't find chessboard\n";
+            cout << *( m_ItImg[1] ) << ": can't find chessboard\n";
         }
 
         if( m_ItImg[0] == m_Images[0].end() )
@@ -548,7 +549,8 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
                 const bool writeImg = true;
                 if( !FindChessboard( frame, writeImg ) )
                 {
-                    cout << "can't find chessboard\n";
+                    cout << *( m_ItImg[0] ) << ": can't find chessboard\n";
+                    cout << *( m_ItImg[1] ) << ": can't find chessboard\n";
                 }
 
 				m_NumCaliImgs++;

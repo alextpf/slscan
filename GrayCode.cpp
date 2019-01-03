@@ -14,6 +14,7 @@
 
 #include "GrayCode.h"
 #define GREEN  cv::Scalar(   0, 255,   0 )
+#define RED    cv::Scalar(   0, 0,     255 )
 
 //======================================
 GrayCode::GrayCode()
@@ -35,6 +36,8 @@ bool GrayCode::GeneratePattern()
 		std::cout << "projector dimenssion is not set (check config.xml )/n";
 		return false;
 	}
+
+    cout << "Generating patterns...\n";
 
 	// init
 	m_Pattern.clear();
@@ -161,7 +164,8 @@ void GrayCode::ComputeNumPatternImgs( const int w, const int h )
 //===========================================================================
 void GrayCode::GenerateShadowMask(
 	const vector<cv::Mat>& whiteImg,
-	const vector<cv::Mat>& blackImg )
+	const vector<cv::Mat>& blackImg,
+    const bool debug )
 {
 	m_ShadowMask.clear();
 
@@ -179,6 +183,10 @@ void GrayCode::GenerateShadowMask(
 	int nonShadowCount = 0;
 
 	bool loadFromSaved = false;
+    if( debug )
+    {
+        loadFromSaved = true;
+    }
 
     int reportFreq = m_ImgHeight / 10;
 
@@ -199,7 +207,7 @@ void GrayCode::GenerateShadowMask(
 			{
                 if( r % reportFreq == 0 )
                 {
-                    cout << "Calculating Shadow Mask ...: ";
+                    cout << "Loading Shadow Mask ...: ";
                     float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
                     cout << percentage << "%\n";
@@ -269,8 +277,8 @@ void GrayCode::GenerateShadowMask(
 		} // if( loadFromSaved )
     }// for k
 
-	cout << "shadowCount= " << shadowCount << endl;
-	cout << "nonShadowCount= " << nonShadowCount << endl;
+	cout << "shadowCount =    " << shadowCount << endl;
+	cout << "nonShadowCount = " << nonShadowCount << endl;
 
 	bool showAndSaveImg = true;
 	if ( showAndSaveImg )
@@ -281,14 +289,19 @@ void GrayCode::GenerateShadowMask(
 		cv::resize( m_ShadowMask[0], leftImg, cv::Size(), 0.4f, 0.4f, cv::INTER_LINEAR );
 		cv::resize( m_ShadowMask[1], rightImg, cv::Size(), 0.4f, 0.4f, cv::INTER_LINEAR );
 
-		string leftMaskName = "Left Shadow Mask";
-		cv::imshow( leftMaskName, leftImg );
-		cv::moveWindow( leftMaskName, 0, 0 );
+        string leftMaskName = "Left Shadow Mask";
+        string rightMaskName = "Right Shadow Mask";
 
-		string rightMaskName = "Right Shadow Mask";
-		cv::imshow( rightMaskName, rightImg );
-		cv::moveWindow( rightMaskName, 755, 0 );
-		cv::waitKey( 1000 );
+        bool showResults = false;
+        if( showResults )
+        {
+            cv::imshow( leftMaskName, leftImg );
+            cv::moveWindow( leftMaskName, 0, 0 );
+
+            cv::imshow( rightMaskName, rightImg );
+            cv::moveWindow( rightMaskName, 755, 0 );
+            cv::waitKey( 1000 );
+        }
 
 		std::stringstream ss1;
 		ss1 << m_Path << leftMaskName << ".jpg";
@@ -309,11 +322,12 @@ void GrayCode::GenerateShadowMask(
 bool GrayCode::Decode(
     const vector<vector<cv::Mat>>& captured,
     const vector<cv::Mat>& whiteImages,
-    const vector<cv::Mat>& blackImages )
+    const vector<cv::Mat>& blackImages,
+    const bool debug )
 {
     const int numSrc = static_cast<int>( captured.size() );
 
-    GenerateShadowMask( whiteImages/*8UC1*/, blackImages );
+    GenerateShadowMask( whiteImages/*8UC1*/, blackImages, debug );
 
 	std::map     < int /*(r * ImgWidth + c) on the captured image */, int /*(r * ProjWidth + c) decoded decimal*/ > leftCam;
 	std::multimap< int /*(r * ProjWidth + c) decoded decimal*/,	   int /*(r * ImgWidth + c) on the captured image */ > rightCam;
@@ -325,8 +339,15 @@ bool GrayCode::Decode(
     rightPath << m_Path << "rightCamMap.txt";
 
 	bool loadFromSavedMap = false;
+    if( debug )
+    {
+        loadFromSavedMap = true;
+    }
+
 	if ( loadFromSavedMap )
 	{
+        cout << "Loading from saved map...\n";
+
 		std::ifstream logLeftCam;
         logLeftCam.open( leftPath.str(), std::ifstream::in );
 
@@ -439,67 +460,86 @@ bool GrayCode::Decode(
 
 	m_DisparityMap = cv::Mat::zeros( m_ImgHeight, m_ImgWidth, CV_32S );
 
-	int marker = 0; // running marker which indicate where the pix is on the right img
+    if( debug )
+    {
+        FindCorrespondanceDebug( whiteImages, leftCam, rightCam );
+    }
+    else
+    {
+        FindCorrespondance( whiteImages, leftCam, rightCam );
+    }
 
-	unsigned int numMatchedPts = 0;
+    return true;
 
-	//debug flat; show images
-	bool showImgs = false;
-	bool showMatched = false;
-	bool saveDisp = true;
+}//Decode
 
-	bool loadDisp = false;
+//======================================================
+bool GrayCode::FindCorrespondance(
+    const vector<cv::Mat>& whiteImages,
+    const std::map< int, int >& leftCam,
+    const std::multimap< int, int >& rightCam )
+{
+    int marker = 0; // running marker which indicate where the pix is on the right img
+
+    unsigned int numMatchedPts = 0;
+
+    //debug flat; show images
+    bool showImgs = false;
+    bool showMatched = false;
+    bool saveDisp = true;
+
+    bool loadDisp = false;
 
     std::stringstream dispPath;
     dispPath << m_Path << "Disparity.txt";
 
-	if ( loadDisp )
-	{
-		std::ifstream disparity;
-		disparity.open( dispPath.str(), std::ifstream::in );
+    if( loadDisp )
+    {
+        std::ifstream disparity;
+        disparity.open( dispPath.str(), std::ifstream::in );
 
-		string line;
-		while ( getline( disparity, line ) )
-		{
-			int r, c, d;
-			stringstream stream;
-			stream.str( line );
-			stream >> r;
-			stream >> c;
-			stream >> d;
+        string line;
+        while( getline( disparity, line ) )
+        {
+            int r, c, d;
+            stringstream stream;
+            stream.str( line );
+            stream >> r;
+            stream >> c;
+            stream >> d;
 
-			m_DisparityMap.at<int>( r, c ) = d;
-			numMatchedPts++;
-		}//while
-		disparity.close();
-	}
-	else
-	{
-		std::ofstream disp;
-		disp.open( dispPath.str(), std::ios_base::out ); // fresh file
+            m_DisparityMap.at<int>( r, c ) = d;
+            numMatchedPts++;
+        }//while
+        disparity.close();
+    }
+    else
+    {
+        std::ofstream disp;
+        disp.open( dispPath.str(), std::ios_base::out ); // fresh file
 
-		cv::Mat leftImg; // white img
-		cv::Mat rightImg; // white img
-		float s = 0.4f;
+        cv::Mat leftImg; // white img
+        cv::Mat rightImg; // white img
+        float s = 0.4f;
 
-		cv::resize( whiteImages[0], leftImg, cv::Size(), s, s, cv::INTER_LINEAR );
-		cv::resize( whiteImages[1], rightImg, cv::Size(), s, s, cv::INTER_LINEAR );
-		string leftName = "Left";
-		string rightName = "Right";
+        cv::resize( whiteImages[0], leftImg, cv::Size(), s, s, cv::INTER_LINEAR );
+        cv::resize( whiteImages[1], rightImg, cv::Size(), s, s, cv::INTER_LINEAR );
+        string leftName = "Left";
+        string rightName = "Right";
 
-		std::map      < int, int>::iterator itLeft;
-		std::multimap < int, int>::iterator itRight;
+        std::map      < int, int>::const_iterator itLeft;
+        std::multimap < int, int>::const_iterator itRight;
 
-		unsigned int total = m_ImgHeight * m_ImgWidth;
+        unsigned int total = m_ImgHeight * m_ImgWidth;
 
-		int marker = 0; // running marker which indicate where the pix is on the right img
-		int rightLimit;
+        int marker = 0; // running marker which indicate where the pix is on the right img
+        int rightLimit;
 
         int reportFreq = m_ImgHeight / 10;
 
-		// scan line fashion to find the correspondance
-		for ( int r = 0; r < m_ImgHeight; r++ ) // row
-		{
+        // scan line fashion to find the correspondance
+        for( int r = 0; r < m_ImgHeight; r++ ) // row
+        {
             if( r % reportFreq == 0 )
             {
                 // show percentage
@@ -510,138 +550,274 @@ bool GrayCode::Decode(
                 //===================================
             }
 
-			for ( int c = 0; c < m_ImgWidth; c++ ) // col
-			{
-				rightLimit = c;
+            for( int c = 0; c < m_ImgWidth; c++ ) // col
+            {
+                rightLimit = c;
 
-				if ( showImgs )
-				{
-					int off = 2;
-					int thick = 2;
-					cv::Mat tmpLeft = leftImg.clone();
-					cv::Point p1( c * s - off, r * s - off );
-					cv::Point p2( c * s + off, r * s + off );
-					cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
-					cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
+                if( showImgs )
+                {
+                    int off = 2;
+                    int thick = 2;
+                    cv::Mat tmpLeft = leftImg.clone();
+                    cv::Point p1( c * s - off, r * s - off );
+                    cv::Point p2( c * s + off, r * s + off );
+                    cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
+                    cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
 
-					cv::imshow( leftName, tmpLeft );
-					cv::moveWindow( leftName, 0, 0 );
-					cv::waitKey( 1 );
-				}
+                    cv::imshow( leftName, tmpLeft );
+                    cv::moveWindow( leftName, 0, 0 );
+                    cv::waitKey( 1 );
+                }
 
-				// convert row col to idx
-				const int leftPixIdx = RowColToIdx( r, c, m_ImgWidth );
-				itLeft = leftCam.find( leftPixIdx ); // find the corresponding idx
+                // convert row col to idx
+                const int leftPixIdx = RowColToIdx( r, c, m_ImgWidth );
+                itLeft = leftCam.find( leftPixIdx ); // find the corresponding idx
 
-				if ( itLeft != leftCam.end() )
-				{
-					int dec = itLeft->second;
-					int rightPixIdx;
+                if( itLeft != leftCam.end() )
+                {
+                    int dec = itLeft->second;
+                    int rightPixIdx;
 
-					bool ok( false );
+                    bool ok( false );
 
-					if ( false )
-					{
-						const int count = rightCam.count( dec );
-						cout << "count= " << count << endl;
-					}
+                    if( false )
+                    {
+                        const int count = rightCam.count( dec );
+                        cout << "count= " << count << endl;
+                    }
 
-					for ( itRight = rightCam.equal_range( dec ).first; itRight != rightCam.equal_range( dec ).second; ++itRight )
-					{
-						rightPixIdx = ( *itRight ).second;
-						int row, col;
-						IdxToRowCol( rightPixIdx, row, col, m_ImgWidth );
+                    for( itRight = rightCam.equal_range( dec ).first; itRight != rightCam.equal_range( dec ).second; ++itRight )
+                    {
+                        rightPixIdx = ( *itRight ).second;
+                        int row, col;
+                        IdxToRowCol( rightPixIdx, row, col, m_ImgWidth );
 
-						if ( showImgs )
-						{
-							int off = 2;
-							int thick = 2;
+                        if( showImgs )
+                        {
+                            int off = 2;
+                            int thick = 2;
 
-							cv::Mat tmpRight = rightImg.clone();
-							cv::Point p3( col * s - off, row * s - off );
-							cv::Point p4( col * s + off, row * s + off );
-							cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
-							cv::rectangle( tmpRight, p3, p4, GREEN, thick );
+                            cv::Mat tmpRight = rightImg.clone();
+                            cv::Point p3( col * s - off, row * s - off );
+                            cv::Point p4( col * s + off, row * s + off );
+                            cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
+                            cv::rectangle( tmpRight, p3, p4, GREEN, thick );
 
-							cv::imshow( rightName, tmpRight );
-							cv::moveWindow( rightName, 755, 0 );
-							cv::waitKey( 1 );
-						}
+                            cv::imshow( rightName, tmpRight );
+                            cv::moveWindow( rightName, 755, 0 );
+                            cv::waitKey( 1 );
+                        }
 
-						// evaluate the legit of the found pix
-						int thresh = 10; // exact will 0
-						bool found = false;
+                        // evaluate the legit of the found pix
+                        int thresh = 10; // exact will 0
+                        bool found = false;
 
-						for ( int m = 0; m <= thresh; ++m )
-						{
-							if ( abs( row - r ) <= m &&
-								col > marker/* "continuity constraint" */ &&
-								col < rightLimit /* "parallell constraint" */ )
-							{
-								if ( showMatched )
-								{
-									int off = 2;
-									int thick = 2;
+                        for( int m = 0; m <= thresh; ++m )
+                        {
+                            if( abs( row - r ) <= m
+                                /*&& col > marker*//* "continuity constraint" */ // this constraint can sometimes hinder the results
+                                /*&& col < rightLimit*/ /* "parallell constraint" */ ) // parallell constraint doens't always hold due to imperfectin of the calibration results
+                            {
+                                if( showMatched )
+                                {
+                                    int off = 2;
+                                    int thick = 2;
 
-									cv::Mat tmpLeft = leftImg.clone();
-									cv::Point p1( c * s - off, r * s - off );
-									cv::Point p2( c * s + off, r * s + off );
-									cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
-									cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
+                                    cv::Mat tmpLeft = leftImg.clone();
+                                    cv::Point p1( c * s - off, r * s - off );
+                                    cv::Point p2( c * s + off, r * s + off );
+                                    cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
+                                    cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
 
-									cv::imshow( leftName, tmpLeft );
-									cv::moveWindow( leftName, 0, 0 );
-									cv::waitKey( 1 );
+                                    cv::imshow( leftName, tmpLeft );
+                                    cv::moveWindow( leftName, 0, 0 );
+                                    cv::waitKey( 1 );
 
-									cv::Mat tmpRight = rightImg.clone();
-									cv::Point p3( col * s - off, row * s - off );
-									cv::Point p4( col * s + off, row * s + off );
-									cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
-									cv::rectangle( tmpRight, p3, p4, GREEN, thick );
+                                    cv::Mat tmpRight = rightImg.clone();
+                                    cv::Point p3( col * s - off, row * s - off );
+                                    cv::Point p4( col * s + off, row * s + off );
+                                    cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
+                                    cv::rectangle( tmpRight, p3, p4, GREEN, thick );
 
-									cv::imshow( rightName, tmpRight );
-									cv::moveWindow( rightName, 755, 0 );
-									cv::waitKey( 1 );
-								}
+                                    cv::imshow( rightName, tmpRight );
+                                    cv::moveWindow( rightName, 755, 0 );
+                                    cv::waitKey( 1 );
+                                }
 
-								ok = true;
-								marker = col;
-								numMatchedPts++;
-								found = true;
-								break;
-							}
-						}//for m
+                                ok = true;
+                                marker = col;
+                                numMatchedPts++;
+                                found = true;
+                                break;
+                            }
+                        }//for m
 
-						if ( found )
-						{
-							break;
-						}
-					}// for
+                        if( found )
+                        {
+                            break;
+                        }
+                    }// for
 
-					if ( ok )
-					{
-						m_DisparityMap.at<int>( r, c ) = marker - c;
+                    if( ok )
+                    {
+                        m_DisparityMap.at<int>( r, c ) = marker - c;
 
-						if ( saveDisp )
-						{
-							disp << r << " " << c << " " << marker - c << endl;
-						}
-					}
-				}// if itLeft
+                        if( saveDisp )
+                        {
+                            disp << r << " " << c << " " << marker - c << endl;
+                        }
+                    }
+                }// if itLeft
 
-			}// for c
+            }// for c
 
-			marker = 0; //reset the marker
-		}// for r
+            marker = 0; //reset the marker
+        }// for r
 
-		disp.close();
-	} // if ( loadDisp )
+        disp.close();
+    } // if ( loadDisp )
 
-	cout << "mumber of matched pts: " << numMatchedPts << endl;
+    cout << "mumber of matched pts: " << numMatchedPts << endl;
 
     return true;
+}// FindCorrespondance
 
-}//Decode
+//======================================================
+void GrayCode::OnMouse( int event, int x, int y, int f, void* data )
+{
+    cv::Point *curobj = reinterpret_cast<cv::Point*>( data );
+
+    if( event == cv::EVENT_LBUTTONDOWN )
+    {
+        *curobj = cv::Point( x, y );
+    }
+}//OnMouse
+
+//======================================================
+bool GrayCode::FindCorrespondanceDebug(
+    const vector<cv::Mat>& whiteImages,
+    const std::map< int, int >& leftCam,
+    const std::multimap< int, int >& rightCam )
+{
+    int marker = 0; // running marker which indicate where the pix is on the right img
+
+    unsigned int numMatchedPts = 0;
+
+    //debug flat; show images
+
+    cv::Mat leftImg; // white img
+    cv::Mat rightImg; // white img
+    float s = 0.4f;
+    float invS = 2.5f; // 1/0.4
+
+    cv::resize( whiteImages[0], leftImg, cv::Size(), s, s, cv::INTER_LINEAR );
+    cv::resize( whiteImages[1], rightImg, cv::Size(), s, s, cv::INTER_LINEAR );
+
+    string leftName = "Left";
+    string rightName = "Right";
+
+    cv::Point poi( -1, -1 );
+
+    bool done = false;
+    while( !done )
+    {
+        bool showOnce = true;
+        if( showOnce )
+        {
+            // show orig img
+            cv::imshow( leftName, leftImg );
+            cv::moveWindow( leftName, 0, 0 );
+            cv::setMouseCallback( leftName, OnMouse, &poi );
+            showOnce = false;
+        }
+
+        int key = cv::waitKey( 10 );
+        done = key == 27;
+
+        if( poi != cv::Point( -1, -1 ) )
+        {
+            int c = poi.x;
+            int r = poi.y;
+
+            cout << "Picked: x = " << c << " , y = " << r << "\n";
+
+            // draw a small rectangel on the selected point
+            int off = 2;
+            int thick = 2;
+
+            cv::Mat tmpLeft = leftImg.clone();
+            cv::cvtColor( tmpLeft, tmpLeft, cv::COLOR_GRAY2BGR );
+
+            cv::Point p1( c - off, r - off );
+            cv::Point p2( c + off, r + off );
+
+            cv::rectangle( tmpLeft, p1, p2, GREEN, thick );
+
+            cv::imshow( leftName, tmpLeft );
+            cv::moveWindow( leftName, 0, 0 );
+
+            // Display information:
+            // show the idx for this pixel
+            // convert row col to idx
+            const int leftPixIdx = RowColToIdx( r * invS, c * invS, m_ImgWidth );
+            cout << "Left Pixel Idx = " << leftPixIdx << "\n";
+
+            std::map      < int, int>::const_iterator itLeft;
+            std::multimap < int, int>::const_iterator itRight;
+
+            itLeft = leftCam.find( leftPixIdx ); // find the corresponding idx
+
+            if( itLeft != leftCam.end() )
+            {
+                int dec = itLeft->second;
+
+                // show the decimal value of this pixel
+                cout << "Decimal value of this pixel= " << dec << "\n";
+
+                // show the found count on the right cam
+                const int count = rightCam.count( dec );
+                cout << "Found count on the right cam = " << count << endl;
+
+                int rightPixIdx;
+
+                cv::Mat tmpRight = rightImg.clone();
+                cv::cvtColor( tmpRight, tmpRight, cv::COLOR_GRAY2BGR );
+
+                for( itRight = rightCam.equal_range( dec ).first; itRight != rightCam.equal_range( dec ).second; ++itRight )
+                {
+                    rightPixIdx = ( *itRight ).second;
+                    int row, col;
+                    IdxToRowCol( rightPixIdx, row, col, m_ImgWidth );
+                    cout << "Right pixel: x = " << col * s << " , y = " << row * s << "\n";
+
+                    // draw small rectangels on the found points on the right image
+                    cv::Point p3( col * s - off, row * s - off );
+                    cv::Point p4( col * s + off, row * s + off );
+                    cv::rectangle( tmpRight, p3, p4, RED, thick );
+                }//for( itRight
+
+                cv::imshow( rightName, tmpRight );
+                cv::moveWindow( rightName, 755, 0 );
+
+            } // if( itLeft != leftCam.end() )
+            else
+            {
+                cout << "error!\n";
+
+            }//if( itLeft != leftCam.end() )
+
+             // reset
+            poi.x = -1;
+            poi.y = -1;
+
+            //wait indefinitely for the user to examine the information
+            cv::waitKey( 0 );
+
+        }//if( poi != cv::Point( -1, -1 ) )
+    }//while( !done )
+
+    return true;
+}// FindCorrespondanceDebug
 
 //===========================================================================
 bool GrayCode::GetProjPixel(

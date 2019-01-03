@@ -28,9 +28,9 @@
 #include <opencv2/imgproc.hpp>
 
 // PCL
-//#include <pcl/io/pcd_io.h>
-//#include <pcl/point_types.h>
-//#include <pcl/registration/icp.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
 
 #include "LiveViewProcessor.h"
 #include "Calibrator.h"
@@ -58,7 +58,8 @@ enum OPERATION {
     CALIBRATE_RIGHT, // obselete. still works but hidden right now
     CALIBRATE_LEFT_AND_RIGHT, // obselete. still works but hidden right now
     GENERATE_3D_ONE_VIEW, // obselete. still works but hidden right now
-    AUTO_GENERATE_3D_VIEWS
+    AUTO_GENERATE_3D_VIEWS,
+    DEBUG_DECODING
 };
 
 enum SOURCE_TYPE {
@@ -97,7 +98,8 @@ bool Calculate3DPrepare(
 	vector<string> outName,
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
-	vector<string> title );
+	vector<string> title,
+    const bool debug );
 
 bool CaptureLeft();
 bool CaptureRight();
@@ -106,7 +108,7 @@ bool CalibrateLeft();
 bool CalibrateRight();
 bool CalibrateLeftAndRight();
 bool ScanOneView( string path );
-bool Generate3DForOneView( string path );
+bool Generate3DForOneView( string path, const bool debug );
 bool OneTurn( const int curDeg, const int speed );
 
 // utility
@@ -242,7 +244,8 @@ int main()
 				}
 
                 // calculate
-                if( !Generate3DForOneView( dir.str() ) )
+                const bool debug = false;
+                if( !Generate3DForOneView( dir.str(), debug ) )
                 {
                     return -1;
                 }
@@ -329,7 +332,8 @@ int main()
 
 				//	std::stringstream dir;
 				//	dir << name << curDeg << "/";
-				//	if ( !Generate3DForOneView( dir.str() ) )
+                //const bool debug = false;
+                //	if ( !Generate3DForOneView( dir.str(),debug ) )
 				//	{
 				//		return -1;
 				//	}
@@ -355,7 +359,8 @@ int main()
 
                     std::stringstream dir;
                     dir << "data/" << name << curDeg << "/";
-                    if( !Generate3DForOneView( dir.str() ) )
+                    const bool debug = false;
+                    if( !Generate3DForOneView( dir.str(), debug ) )
                     {
                         return -1;
                     }
@@ -495,7 +500,26 @@ int main()
                 std::stringstream dir;
                 dir << name << "/";
 
-                if( !Generate3DForOneView( dir.str() ) )
+                const bool debug = false;
+                if( !Generate3DForOneView( dir.str(), debug ) )
+                {
+                    return -1;
+                }
+            }
+            break;
+
+            case DEBUG_DECODING:
+            {
+                char name[256];
+                std::cout << "Please enter the project name: ";
+                std::cin.getline( name, 256 );
+
+                std::stringstream dir;
+                dir << name << "/";
+
+                const bool debug = true;
+
+                if( !Generate3DForOneView( dir.str(), debug ) )
                 {
                     return -1;
                 }
@@ -534,8 +558,8 @@ OPERATION MainMenu()
     cout << "  [15]: calibrate right camera\n"; // obsolete
     cout << "  [16]: calibrate both left & right camera\n"; // obsolete
     cout << "  [17]: Generate 3D of scanned one view ) \n"; // obsolete
-    cout << "  [18]: Auto-generate 3D of scanned views ) \n\n";
-
+    cout << "  [18]: Auto-generate 3D of scanned views ) \n";
+    cout << "  [19]: Debug decoding process \n\n";
     cout << "Answer: ";
 
 	char name[256];
@@ -707,7 +731,8 @@ bool Calculate3DPrepare(
 	vector<string> outName,
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
-	vector<string> title )
+	vector<string> title,
+    const bool debug )
 {
 	processor.Init();
 
@@ -782,7 +807,7 @@ bool Calculate3DPrepare(
 		break;
 	}//switch ( outType )
 
-	processor.Generate3D();
+    processor.Generate3D( debug );
 
 	return true;
 }//Calculate3DPrepare
@@ -1105,7 +1130,7 @@ bool ScanOneView( string path )
 } // ScanOneView
 
 //=========================
-bool Generate3DForOneView( string path )
+bool Generate3DForOneView( string path, const bool debug )
 {
     // check if the dir exist or not, if not, need to scan data first!
     if( DirExists( path.c_str() ) != EXISTS )
@@ -1141,7 +1166,8 @@ bool Generate3DForOneView( string path )
 		outputFileName,
 		IMG,
 		IMG,
-		title );
+		title,
+        debug );
 
 	return ok;
 }//Generate3DForOneView
@@ -1197,27 +1223,27 @@ bool OneTurn( const int curDeg, const int speed )
     return ok;
 }//OneTurn
 
-//void TestPcl()
-//{
-//	pcl::PointCloud<pcl::PointXYZ> cloud;
-//
-//	// Fill in the cloud data
-//	cloud.width = 5;
-//	cloud.height = 1;
-//	cloud.is_dense = false;
-//	cloud.points.resize( cloud.width * cloud.height );
-//
-//	for ( size_t i = 0; i < cloud.points.size(); ++i )
-//	{
-//		cloud.points[i].x = 1024 * rand() / ( RAND_MAX + 1.0f );
-//		cloud.points[i].y = 1024 * rand() / ( RAND_MAX + 1.0f );
-//		cloud.points[i].z = 1024 * rand() / ( RAND_MAX + 1.0f );
-//	}
-//
-//	pcl::io::savePCDFileASCII( "test_pcd.pcd", cloud );
-//	std::cerr << "Saved " << cloud.points.size() << " data points to test_pcd.pcd." << std::endl;
-//
-//	for ( size_t i = 0; i < cloud.points.size(); ++i )
-//		std::cerr << "    " << cloud.points[i].x << " " << cloud.points[i].y << " " << cloud.points[i].z << std::endl;
-//
-//}
+void TestPcl()
+{
+	pcl::PointCloud<pcl::PointXYZ> cloud;
+
+	// Fill in the cloud data
+	cloud.width = 5;
+	cloud.height = 1;
+	cloud.is_dense = false;
+	cloud.points.resize( cloud.width * cloud.height );
+
+	for ( size_t i = 0; i < cloud.points.size(); ++i )
+	{
+		cloud.points[i].x = 1024 * rand() / ( RAND_MAX + 1.0f );
+		cloud.points[i].y = 1024 * rand() / ( RAND_MAX + 1.0f );
+		cloud.points[i].z = 1024 * rand() / ( RAND_MAX + 1.0f );
+	}
+
+	pcl::io::savePCDFileASCII( "test_pcd.pcd", cloud );
+	std::cerr << "Saved " << cloud.points.size() << " data points to test_pcd.pcd." << std::endl;
+
+	for ( size_t i = 0; i < cloud.points.size(); ++i )
+		std::cerr << "    " << cloud.points[i].x << " " << cloud.points[i].y << " " << cloud.points[i].z << std::endl;
+
+}

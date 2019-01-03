@@ -24,7 +24,7 @@ public:
 		SetDoCali( false );
 	}
 
-	void Generate3D();
+    void Generate3D( const bool debug );
 
     int GetNumCaliImgs() const
     {

@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include<map>
 using namespace std;
 
 class GrayCode
@@ -12,7 +13,8 @@ public:
     bool Decode(
         const vector<vector<cv::Mat> >& captured,
 		const vector<cv::Mat>& whiteImages,
-		const vector<cv::Mat>& blackImages );
+		const vector<cv::Mat>& blackImages,
+        const bool debug );
 
 	void ComputeNumPatternImgs(const int w, const int h );
 
@@ -71,7 +73,8 @@ private:
 
     void GenerateShadowMask(
 		const vector<cv::Mat>& whiteImg,
-		const vector<cv::Mat>& blackImg );
+		const vector<cv::Mat>& blackImg,
+        const bool debug );
 
 	void SetProjectorWidth( const int w ) // called in ComputeNumPatternImgs
 	{
@@ -93,6 +96,20 @@ private:
 		col = idx % w;
 		row = idx / w;
 	}
+
+    bool FindCorrespondance(
+        const vector<cv::Mat>& whiteImages,
+        const std::map< int, int >& leftCam,
+        const std::multimap< int, int >& rightCam
+    );
+
+    bool FindCorrespondanceDebug(
+        const vector<cv::Mat>& whiteImages,
+        const std::map< int, int >& leftCam,
+        const std::multimap< int, int >& rightCam
+    );
+
+    static void OnMouse( int event, int x, int y, int f, void* data );
 
     int					m_ProjectorWidth; // projector resolution
     int					m_ProjectorHeight; // projector resolution
