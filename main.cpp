@@ -28,9 +28,9 @@
 #include <opencv2/imgproc.hpp>
 
 // PCL
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
-#include <pcl/registration/icp.h>
+//#include <pcl/io/pcd_io.h>
+//#include <pcl/point_types.h>
+//#include <pcl/registration/icp.h>
 
 #include "LiveViewProcessor.h"
 #include "Calibrator.h"
@@ -89,7 +89,7 @@ bool CaptureAndOrCali(
 	SOURCE_TYPE inType,
 	SOURCE_TYPE outType,
 	vector<LiveViewProcessor::WEB_CAM_ID> webCamId,
-	vector<string> title );
+	vector<string> title);
 
 bool Calculate3DPrepare(
 	string in,
@@ -107,7 +107,7 @@ bool CaptureLeftAndRight();
 bool CalibrateLeft();
 bool CalibrateRight();
 bool CalibrateLeftAndRight();
-bool ScanOneView( string path );
+bool ScanOneView( string path, const bool captureRoi );
 bool Generate3DForOneView( string path, const bool debug );
 bool OneTurn( const int curDeg, const int speed );
 
@@ -116,6 +116,7 @@ DIR_STATUS DirExists( const char *path );
 
 //======================================
 //globals
+bool colImgOnly = false;
 Calibrator processor;
 char inPath[256];
 char outPath[256];
@@ -238,7 +239,8 @@ int main()
 				_mkdir( dir.str().c_str() );
 
                 // capture
-				if ( !ScanOneView( dir.str() ) )
+				bool captureRoi = false;
+				if ( !ScanOneView( dir.str(), captureRoi ) )
 				{
 					return -1;
 				}
@@ -278,10 +280,12 @@ int main()
 				}
 
                 int fullCircle = 360; // degree, full circle
-                int delta = 20; // one turn
+                int delta = 30; // one turn
                 int steps = fullCircle / delta;
 
 				// each step capture
+				bool captureRoi = false;
+
                 for( int i = 0, curDeg = 0; i < steps; ++i, curDeg += delta )
 				{
                     cout << "Scanning " << i + 1 << "/" << steps << " view ... \n";
@@ -289,7 +293,10 @@ int main()
 					std::stringstream dir;
 					dir << name << curDeg << "/";
 					_mkdir( dir.str().c_str() );
-					if ( !ScanOneView( dir.str() ) )
+
+					captureRoi = i == 0;
+
+					if ( !ScanOneView( dir.str(), captureRoi ) )
 					{
 						return -1;
 					}//if
@@ -648,6 +655,7 @@ bool CaptureAndOrCali(
     processor.SetScaleFactorForShow( scaleFactor );
 	processor.SetPath( in );
 	processor.DisplayOutput( title );
+	processor.ReadRoi();
 
 	//====================================
 	switch ( inType )
@@ -807,6 +815,8 @@ bool Calculate3DPrepare(
 		break;
 	}//switch ( outType )
 
+	processor.ReadRoi();
+
     processor.Generate3D( debug );
 
 	return true;
@@ -839,13 +849,14 @@ bool CaptureLeft()
 		IMG,
 		ids,
 		title );
+
 	if ( !ok )
 	{
 		return false;
 	}
-
+	const bool captureRoi = false;
 	// Start the Process
-	processor.CaptureAndClibrate();
+	processor.CaptureAndClibrate( captureRoi );
 
 	return true;
 }//CaptureLeft
@@ -883,8 +894,10 @@ bool CaptureRight()
 		return false;
 	}
 
+	const bool captureRoi = false;
+
 	// Start the Process
-	processor.CaptureAndClibrate();
+	processor.CaptureAndClibrate( captureRoi );
 	return true;
 } // CaptureRight
 
@@ -925,8 +938,10 @@ bool CaptureLeftAndRight()
 		return false;
 	}
 
+	const bool captureRoi = false;
+
 	// Start the Process
-	processor.CaptureAndClibrate();
+	processor.CaptureAndClibrate( captureRoi );
 	return true;
 }//CaptureLeftAndRight
 
@@ -990,15 +1005,17 @@ bool CalibrateLeft()
 		IMG,
 		IMG,
 		ids,
-		title );
+		title);
 
 	if ( !ok )
 	{
 		return false;
 	}
 
+	const bool captureRoi = false;
+
 	// Start the Process
-	processor.CaptureAndClibrate();
+	processor.CaptureAndClibrate( captureRoi );
 	return true;
 }//CalibrateLeft
 
@@ -1031,14 +1048,16 @@ bool CalibrateRight()
 		IMG,
 		IMG,
 		ids,
-		title );
+		title);
 	if ( !ok )
 	{
 		return false;
 	}
 
+	const bool captureRoi = false;
+
 	// Start the Process
-	processor.CaptureAndClibrate();
+	processor.CaptureAndClibrate( captureRoi );
 	return true;
 } // CalibrateRight
 
@@ -1073,20 +1092,22 @@ bool CalibrateLeftAndRight()
 		IMG,
 		IMG,
 		ids,
-		title );
+		title);
 
 	if ( !ok )
 	{
 		return false;
 	}
 
+	const bool captureRoi = false;
+
 	// Start the Process
-	processor.CaptureAndClibrate();
+	processor.CaptureAndClibrate( captureRoi );
 	return true;
 }//CalibrateLeftAndRight
 
 //==========================
-bool ScanOneView( string path )
+bool ScanOneView( string path, const bool captureRoi )
 {
     // create dir if not already existed. If already existed, will overwrite its contents!
     _mkdir( path.c_str() );
@@ -1104,6 +1125,7 @@ bool ScanOneView( string path )
 	fileName.push_back( "scan_left" );
 	fileName.push_back( "scan_right" );
 
+	processor.SetColImgOnly( colImgOnly );
 	processor.SetProjectorDimension( projW, projH );
 	processor.SetProjWinName( "Pattern Window" );
 
@@ -1125,7 +1147,7 @@ bool ScanOneView( string path )
 	}
 
 	// Start the Process
-	processor.Scan();
+	processor.Scan( captureRoi );
 	return true;
 } // ScanOneView
 
@@ -1152,6 +1174,7 @@ bool Generate3DForOneView( string path, const bool debug )
 	title.push_back( "Right Cam" );
 
 	processor.Init();
+	processor.SetColImgOnly( colImgOnly );
 	processor.SetProjectorDimension( projW, projH );
 
 	if ( !processor.GeneratePattern() )
@@ -1222,28 +1245,28 @@ bool OneTurn( const int curDeg, const int speed )
 
     return ok;
 }//OneTurn
-
-void TestPcl()
-{
-	pcl::PointCloud<pcl::PointXYZ> cloud;
-
-	// Fill in the cloud data
-	cloud.width = 5;
-	cloud.height = 1;
-	cloud.is_dense = false;
-	cloud.points.resize( cloud.width * cloud.height );
-
-	for ( size_t i = 0; i < cloud.points.size(); ++i )
-	{
-		cloud.points[i].x = 1024 * rand() / ( RAND_MAX + 1.0f );
-		cloud.points[i].y = 1024 * rand() / ( RAND_MAX + 1.0f );
-		cloud.points[i].z = 1024 * rand() / ( RAND_MAX + 1.0f );
-	}
-
-	pcl::io::savePCDFileASCII( "test_pcd.pcd", cloud );
-	std::cerr << "Saved " << cloud.points.size() << " data points to test_pcd.pcd." << std::endl;
-
-	for ( size_t i = 0; i < cloud.points.size(); ++i )
-		std::cerr << "    " << cloud.points[i].x << " " << cloud.points[i].y << " " << cloud.points[i].z << std::endl;
-
-}
+//
+//void TestPcl()
+//{
+//	pcl::PointCloud<pcl::PointXYZ> cloud;
+//
+//	// Fill in the cloud data
+//	cloud.width = 5;
+//	cloud.height = 1;
+//	cloud.is_dense = false;
+//	cloud.points.resize( cloud.width * cloud.height );
+//
+//	for ( size_t i = 0; i < cloud.points.size(); ++i )
+//	{
+//		cloud.points[i].x = 1024 * rand() / ( RAND_MAX + 1.0f );
+//		cloud.points[i].y = 1024 * rand() / ( RAND_MAX + 1.0f );
+//		cloud.points[i].z = 1024 * rand() / ( RAND_MAX + 1.0f );
+//	}
+//
+//	pcl::io::savePCDFileASCII( "test_pcd.pcd", cloud );
+//	std::cerr << "Saved " << cloud.points.size() << " data points to test_pcd.pcd." << std::endl;
+//
+//	for ( size_t i = 0; i < cloud.points.size(); ++i )
+//		std::cerr << "    " << cloud.points[i].x << " " << cloud.points[i].y << " " << cloud.points[i].z << std::endl;
+//
+//}

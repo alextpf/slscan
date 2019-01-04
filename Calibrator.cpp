@@ -5,6 +5,10 @@
 #include <opencv2/core.hpp>
 
 #include "Calibrator.h"
+
+#define GREEN  cv::Scalar(   0, 255,   0 )
+#define RED    cv::Scalar(   0, 0,     255 )
+
 //=======================================================================
 // helper function to show type
 std::string type2str( int type )
@@ -40,7 +44,18 @@ Calibrator::Calibrator()
 	, m_CalibPatternHeight( 0 )
 	, m_CaptureAndCali( false )
 	, m_DoCali( false )
-{}
+{
+	m_ROICorners.clear();
+
+	cv::Point pt( -1, -1 );
+
+	vector<cv::Point> ptVec;
+	ptVec.push_back( pt );//corner1
+	ptVec.push_back( pt );//corner2
+
+	m_ROICorners.push_back( ptVec );//left cam
+	m_ROICorners.push_back( ptVec );// right cam
+}
 
 //=======================================================================
 void Calibrator::LiveView()
@@ -103,7 +118,7 @@ void Calibrator::LiveView()
 } // LiveView
 
 //=======================================================================
-void Calibrator::CaptureAndClibrate()
+void Calibrator::CaptureAndClibrate( const bool captureRoi )
 {
 	// current frame
 	vector<cv::Mat> frame;
@@ -341,8 +356,15 @@ void Calibrator::Generate3D( const bool debug )
 	captured.push_back( left );
 	captured.push_back( right );
 
-	//restructure captured such that its size is like 2 (left & right) x NumPatternImgs x images
-	m_GrayCode.Decode( captured, white/*8UC1*/, black, debug );
+	if ( m_GrayCode.GetColImgOnly() )
+	{
+		m_GrayCode.DecodeColImgOnly( captured, white/*8UC1*/, black, debug );
+	}
+	else
+	{
+		//restructure captured such that its size is like 2 (left & right) x NumPatternImgs x images
+		m_GrayCode.DecodeTwoDir( captured, white/*8UC1*/, black, debug );
+	}
 
 	vector<cv::Point3d> pointcloud;
 	vector<cv::Point3i> colors;
@@ -425,7 +447,18 @@ void Calibrator::ReprojectImageTo3D(
 }//ReprojectImageTo3D
 
 //=======================================================================
-void Calibrator::Scan()
+void Calibrator::OnMouse( int event, int x, int y, int f, void* data )
+{
+	std::vector<cv::Point> *curobj = reinterpret_cast<std::vector<cv::Point>*>( data );
+
+	if ( event == cv::EVENT_LBUTTONDOWN )
+	{
+		curobj->push_back( cv::Point( x, y ) );
+	}
+}//OnMouse
+
+//=======================================================================
+void Calibrator::Scan( const bool captureRoi )
 {
 	// Setting pattern window on second monitor (the projector's one)
 	cv::namedWindow( m_ProjWinName, cv::WINDOW_NORMAL );
@@ -448,7 +481,55 @@ void Calibrator::Scan()
             WriteImg( "pattern", pattern[i], i );
         }
     }
+
     //====================
+	// capture ROI
+	if ( captureRoi )
+	{
+		vector<cv::Mat> tmp;
+		for ( int j = 0; j < m_NumSource; j++ )
+		{
+			tmp.push_back( cv::Mat() );
+		}
+
+		bool ok = ReadNextFrame( tmp );
+		if ( !ok )
+		{
+			cout << "can't read webcam/n";
+		}
+
+		DisplayFrame( m_WindowNameOutput, tmp, captureRoi );
+	}
+	else
+	{
+		//// write default roi
+		//// save Roi
+		//cv::Point pt1( 0, 0 );
+		//cv::Point pt2( m_ImgSiz.width, m_ImgSiz.height ); // default
+
+		//vector<cv::Point> ptVec;
+		//ptVec.push_back( pt1 );//corner1
+		//ptVec.push_back( pt2 );//corner2
+
+		//vector<vector<cv::Point>> corners;
+		//corners.push_back( ptVec );//left cam
+		//corners.push_back( ptVec );// right cam
+
+		//WriteRoi( corners );
+	}
+
+	WriteRoi( m_ROICorners );
+	//==================
+
+	// consume 1 frame
+	imshow( m_ProjWinName, pattern[0] );
+	cv::waitKey( 10 );
+	vector<cv::Mat> tmp1;
+	for ( int j = 0; j < m_NumSource; j++ )
+	{
+		tmp1.push_back( cv::Mat() );
+	}
+	ReadNextFrame( tmp1 );
 
     for( int i = 0; i < patSiz; i++ )
 	{
@@ -468,7 +549,7 @@ void Calibrator::Scan()
 		bool ok = ReadNextFrame( frame );
 		if ( !ok )
 		{
-			cout << "can't read video/n";
+			cout << "can't read webcam/n";
 			break;
 		}
 
@@ -524,7 +605,6 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
         if( !FindChessboard( frame, writeImg ) )
         {
             cout << *( m_ItImg[0] ) << ": can't find chessboard\n";
-            cout << *( m_ItImg[1] ) << ": can't find chessboard\n";
         }
 
         if( m_ItImg[0] == m_Images[0].end() )
@@ -550,7 +630,6 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
                 if( !FindChessboard( frame, writeImg ) )
                 {
                     cout << *( m_ItImg[0] ) << ": can't find chessboard\n";
-                    cout << *( m_ItImg[1] ) << ": can't find chessboard\n";
                 }
 
 				m_NumCaliImgs++;
@@ -990,26 +1069,72 @@ void Calibrator::WriteCaliWithCirclesImg( const string& fileName, const cv::Mat&
 }//WriteCaliWithCirclesImg
 
 //=====================================================
-void  Calibrator::DisplayFrame( const vector<string>& winName, const vector<cv::Mat>& output )
+void  Calibrator::DisplayFrame(
+	const vector<string>& winName,
+	const vector<cv::Mat>& output,
+	const bool captureRoi )
 {
 	// display output frame
 	if ( winName.size() > 0 && !IsStopped() )
 	{
+		if ( captureRoi )
+		{
+			// reset
+			m_ROICorners.clear();
+		}
+
 		for ( int i = 0; i < m_NumSource; i++ )
 		{
-			if ( m_ScaleFactorForShow != 1.0f )
-			{
-				cv::Mat tmp;
-				cv::resize( output[i], tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
-				cv::imshow( winName[i], tmp );
-			}
-			else
-			{
-				cv::imshow( winName[i], output[i] );
-			}
+			cv::Mat tmp;
+			cv::resize( output[i], tmp, cv::Size(), m_ScaleFactorForShow, m_ScaleFactorForShow );
+			cv::imshow( winName[i], tmp );
 			cv::moveWindow( winName[i], i * 750, 0 );
-		}
-	}
+
+			if ( captureRoi )
+			{
+				vector<cv::Point> pts;
+				cv::setMouseCallback( winName[i], OnMouse, &pts );
+				bool done = false;
+
+				while ( !done )
+				{
+					while ( pts.size() != 2 )
+					{
+						cv::imshow( winName[i], tmp );
+						cv::moveWindow( winName[i], i * 750, 0 );
+						cv::waitKey( 10 );
+					}
+
+					// draw the ROI, see if OK
+					cv::Mat img = tmp.clone();
+
+					const int radius = 3;
+					const int thickness = 2;
+					cv::rectangle( img, pts[0], pts[1], RED, thickness );
+
+					cout << "If OK, press Enter, otherwise press any key to continue...\n";
+
+					cv::imshow( winName[i], img );
+
+					int key = cv::waitKey( 0 );
+					done = key == 13; // enter
+
+					if ( done )
+					{
+						pts[0] /= m_ScaleFactorForShow; // x, col
+						pts[1] /= m_ScaleFactorForShow; // y, row
+
+						m_ROICorners.push_back( pts );
+					}
+					else
+					{
+						pts.clear(); // reset
+					}
+				}//while ( !done )
+			}//if ( captureRoi )
+		} // for ( int i = 0; i < m_NumSource; i++ )
+
+	} // if ( winName.size() > 0 && !IsStopped() )
 } // DisplayFrame
 
 //=====================================================

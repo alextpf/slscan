@@ -10,11 +10,17 @@ public:
 
     bool GeneratePattern();
 
-    bool Decode(
+    bool DecodeTwoDir(
         const vector<vector<cv::Mat> >& captured,
 		const vector<cv::Mat>& whiteImages,
 		const vector<cv::Mat>& blackImages,
         const bool debug );
+
+	bool DecodeColImgOnly(
+		const vector<vector<cv::Mat> >& captured,
+		const vector<cv::Mat>& whiteImages,
+		const vector<cv::Mat>& blackImages,
+		const bool debug );
 
 	void ComputeNumPatternImgs(const int w, const int h );
 
@@ -58,7 +64,23 @@ public:
         m_Path = path;
     }
 
+	void SetCorners( const vector<vector<cv::Point>>& roiCorners )
+	{
+		m_ROICorners = roiCorners;
+	}
+
+	bool GetColImgOnly()
+	{
+		return m_ColImgOnly;
+	}
+
+	void SetColImgOnly( const bool ok )
+	{
+		m_ColImgOnly = ok;
+	}
+
 private:
+	bool IsInsideROI( const int r, const int c, const vector<cv::Point>& pts );
 
     // convert Gray code to decimal
     int GrayToDec( const std::vector<uchar>& gray ) const;
@@ -69,6 +91,13 @@ private:
         const int r,
 		const int c,
 		int& rowDec, // out
+		int& colDec ); // out
+
+	//for a (r,c) pixel of the camera returns the corresponding projector pixel by calculating the decimal number
+	bool GetProjPixelColImgOnly(
+		const vector<cv::Mat>& captured,
+		const int r,
+		const int c,
 		int& colDec ); // out
 
     void GenerateShadowMask(
@@ -109,6 +138,18 @@ private:
         const std::multimap< int, int >& rightCam
     );
 
+	bool FindCorrespondanceColImgOnly(
+		const vector<cv::Mat>& whiteImages,
+		const vector<std::map< int, int >>& leftCam,
+		const vector<std::multimap< int, int >>& rightCam
+	);
+
+	bool FindCorrespondanceDebugColImgOnly(
+		const vector<cv::Mat>& whiteImages,
+		const vector<std::map< int, int >>& leftCam,
+		const vector<std::multimap< int, int >>& rightCam
+	);
+
     static void OnMouse( int event, int x, int y, int f, void* data );
 
     int					m_ProjectorWidth; // projector resolution
@@ -126,4 +167,6 @@ private:
     vector<cv::Mat>     m_ShadowMask; // 0: is shadow; 0: otherwise
     cv::Mat             m_DisparityMap;
     string              m_Path;
+	vector<vector<cv::Point>>	m_ROICorners; // each img has 2 corners
+	bool				m_ColImgOnly;
 }; // GrayCode
