@@ -626,7 +626,7 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
         const bool writeImg = false;
         if( !FindChessboard( frame, writeImg ) )
         {
-            cout << *( m_ItImg[0] ) << ": can't find chessboard\n";
+            cout << *( m_ItImg[0] - 1 ) << ": can't find chessboard\n";
         }
 
         if( m_ItImg[0] == m_Images[0].end() )
@@ -651,7 +651,7 @@ bool Calibrator::CaptureOptions( vector<cv::Mat>& frame, vector<cv::Mat>& output
                 const bool writeImg = true;
                 if( !FindChessboard( frame, writeImg ) )
                 {
-                    cout << *( m_ItImg[0] ) << ": can't find chessboard\n";
+                    cout << *( m_ItImg[0] - 1 ) << ": can't find chessboard\n";
                 }
 
 				m_NumCaliImgs++;

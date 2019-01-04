@@ -38,8 +38,6 @@ bool GrayCode::GeneratePattern()
 		return false;
 	}
 
-    cout << "Generating patterns...\n";
-
 	// init
 	m_Pattern.clear();
 
@@ -50,6 +48,8 @@ bool GrayCode::GeneratePattern()
 		m_Pattern.push_back( tmp );
 	}
 
+    int reportFreq = m_ProjectorWidth / 10;
+
 	if ( m_ColImgOnly )
 	{
 		uchar flag = 0;
@@ -59,6 +59,15 @@ bool GrayCode::GeneratePattern()
 			int rem = 0; // remain
 			int num = c;
 			int prevRem = c % 2;
+
+            //============================
+            if( c % reportFreq == 0 )
+            {
+                cout << "Generating patterns...: ";
+                float percentage = float( c ) / float( m_ProjectorWidth ) * 100.0f;
+                cout << percentage << " %\n";
+            }
+            //============================
 
 			for ( int k = 0; k < m_NumColImgs; k++ )  // images loop
 			{
@@ -109,6 +118,15 @@ bool GrayCode::GeneratePattern()
 			int rem = 0; // remain
 			int num = c;
 			int prevRem = c % 2;
+
+            //============================
+            if( c % reportFreq == 0 )
+            {
+                cout << "Generating patterns...: ";
+                float percentage = float( c ) / float( m_ProjectorWidth ) * 100.0f;
+                cout << percentage << " %\n";
+            }
+            //============================
 
 			for ( int k = 0; k < m_NumColImgs; k++ )  // images loop
 			{
@@ -270,7 +288,7 @@ void GrayCode::GenerateShadowMask(
                     cout << "Loading Shadow Mask ...: ";
                     float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
-                    cout << percentage << "%\n";
+                    cout << percentage << " %\n";
                 }
 
 				for ( int c = 0; c < m_ImgWidth; c++ ) // col
@@ -309,7 +327,7 @@ void GrayCode::GenerateShadowMask(
                     cout << "Calculating Shadow Mask ...: ";
                     float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
-                    cout << percentage << "%\n";
+                    cout << percentage << " %\n";
                 }
 
 				for ( int c = 0; c < m_ImgWidth; c++ ) // col
@@ -465,7 +483,7 @@ bool GrayCode::DecodeTwoDir(
                     cout << "Creating Maps ...: ";
                     float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
-                    cout << percentage << "%\n";
+                    cout << percentage << " %\n";
                 }
 
 				for ( int c = 0; c < m_ImgWidth; c++ ) // col
@@ -643,7 +661,7 @@ bool GrayCode::DecodeColImgOnly(
 					cout << "Creating Maps ...: ";
 					float percentage = float( r + k * m_ImgHeight ) / float( 2.0f * m_ImgHeight ) * 100.0f;
 
-					cout << percentage << "%\n";
+					cout << percentage << " %\n";
 				}
 
 				std::map< int, int > tmpLeftMap;
@@ -799,7 +817,7 @@ bool GrayCode::FindCorrespondance(
                 cout << "Decoding ...: ";
                 float percentage = float( r ) / float( m_ImgHeight ) * 100.0f;
 
-                cout << percentage << "%\n";
+                cout << percentage << " %\n";
                 //===================================
             }
 
@@ -1163,7 +1181,7 @@ bool GrayCode::FindCorrespondanceColImgOnly(
 				cout << "Decoding ...: ";
 				float percentage = float( r ) / float( m_ImgHeight ) * 100.0f;
 
-				cout << percentage << "%\n";
+				cout << percentage << " %\n";
 				//===================================
 			}
 
