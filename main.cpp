@@ -59,7 +59,8 @@ enum OPERATION {
     CALIBRATE_LEFT_AND_RIGHT, // obselete. still works but hidden right now
     GENERATE_3D_ONE_VIEW, // obselete. still works but hidden right now
     AUTO_GENERATE_3D_VIEWS,
-    DEBUG_DECODING
+    DEBUG_DECODING,
+    CAPTURE_ROI_FOR_DATA
 };
 
 enum SOURCE_TYPE {
@@ -77,6 +78,7 @@ enum DIR_STATUS {
 //======================================
 //fwd declare
 //void TestPcl();
+bool CaptureROIForData( string path );
 bool LiveView();
 OPERATION MainMenu();
 void WriteConfig();
@@ -365,7 +367,7 @@ int main()
                     cout << "Generating " << i + 1 << "/" << steps << " view ... \n";
 
                     std::stringstream dir;
-                    dir << "data/" << name << curDeg << "/";
+                    dir << name << curDeg << "/";
                     const bool debug = false;
                     if( !Generate3DForOneView( dir.str(), debug ) )
                     {
@@ -471,6 +473,19 @@ int main()
 			}
 			break;
 
+            case CAPTURE_ROI_FOR_DATA:
+            {
+                char name[256];
+                std::cout << "Please enter the project name: ";
+                std::cin.getline( name, 256 );
+
+                std::stringstream dir;
+                dir << name << "/";
+
+                CaptureROIForData( dir.str() );
+            }
+            break;
+
             case CALIBRATE_LEFT:
             {
                 if( !CalibrateLeft() )
@@ -566,7 +581,9 @@ OPERATION MainMenu()
     cout << "  [16]: calibrate both left & right camera\n"; // obsolete
     cout << "  [17]: Generate 3D of scanned one view ) \n"; // obsolete
     cout << "  [18]: Auto-generate 3D of scanned views ) \n";
-    cout << "  [19]: Debug decoding process \n\n";
+    cout << "  [19]: Debug decoding process \n";
+    cout << "  [20]: Create ROI for scanned data \n\n";
+
     cout << "Answer: ";
 
 	char name[256];
@@ -1060,6 +1077,68 @@ bool CalibrateRight()
 	processor.CaptureAndClibrate( captureRoi );
 	return true;
 } // CalibrateRight
+
+  //==============================
+bool CaptureROIForData( string path )
+{
+    if( DirExists( path.c_str() ) != EXISTS )
+    {
+        cout << "Need to scan left cam data first!/n";
+        return false;
+    }
+
+    vector<string> inputFileName;
+    inputFileName.push_back( "scan_left" );
+    inputFileName.push_back( "scan_right" );
+
+    vector<string> title;
+    title.push_back( "Left Cam" );
+    title.push_back( "Right Cam" );
+
+    processor.Init();
+
+    delay = 1; // ms
+    const int numDigit = 2;
+    const int numSource = 2;
+    const float scaleFactor = 0.4f;
+
+    processor.SetNumSource( numSource ); // num of camera
+    processor.SetDelay( delay );
+    processor.SetInputFileName( inputFileName );
+    processor.SetFileNameNumDigits( numDigit );
+    processor.SetPath( path );
+    processor.DisplayOutput( title );
+    processor.SetScaleFactorForShow( scaleFactor );
+
+    const int startFrame = 0;// frame number we want to start at
+    const int endFrame = processor.ReadNumPatterns(); // assuming previously we have captured the cali imgs
+
+    vector<vector<string>> imgs;
+
+    for( int j = 0; j < numSource; j++ )
+    {
+        vector<string> tmp;
+        for( int i = 0; i < endFrame; i++ )
+        {
+            char buffer[100];
+            sprintf_s( buffer, "%s%s%02i.jpg", path.c_str(), inputFileName[j].c_str(), i );
+
+            string imgName = buffer;
+            tmp.push_back( imgName );
+        }
+        imgs.push_back( tmp );
+    }
+
+    processor.SetInput( imgs );
+
+    const bool captureRoi = true;
+
+    // Start the Process
+    processor.CaptureAndClibrate( captureRoi );
+
+    //==============
+    return true;
+}//CaptureROIForData
 
 //============================
 bool CalibrateLeftAndRight()

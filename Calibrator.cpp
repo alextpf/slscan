@@ -132,6 +132,27 @@ void Calibrator::CaptureAndClibrate( const bool captureRoi )
 		return;
 	}
 
+    //====================
+    // capture ROI
+    if( captureRoi )
+    {
+        vector<cv::Mat> tmp;
+        for( int j = 0; j < m_NumSource; j++ )
+        {
+            tmp.push_back( cv::Mat() );
+        }
+
+        bool ok = ReadNextFrame( tmp );
+        if( !ok )
+        {
+            cout << "can't read webcam/n";
+        }
+
+        DisplayFrame( m_WindowNameOutput, tmp, captureRoi );
+        WriteRoi( m_ROICorners );
+        return;
+    }
+
     for( int i = 0; i < m_NumSource; i++ )
     {
         frame.push_back( cv::Mat() );
@@ -145,6 +166,7 @@ void Calibrator::CaptureAndClibrate( const bool captureRoi )
 	{
 		// read next frame if any
 		ok = ok && ReadNextFrame( frame );
+        ok = ok && ReadNextFrame( frame );//whiter
 		if ( !ok )
 		{
 			break;
