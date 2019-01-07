@@ -165,7 +165,6 @@ void Calibrator::CaptureAndClibrate( const bool captureRoi )
 	while ( !IsStopped() )
 	{
 		// read next frame if any
-		ok = ok && ReadNextFrame( frame );
         ok = ok && ReadNextFrame( frame );//whiter
 		if ( !ok )
 		{
@@ -521,6 +520,16 @@ void Calibrator::Scan( const bool captureRoi )
 		}
 
 		DisplayFrame( m_WindowNameOutput, tmp, captureRoi );
+
+		// consume 1 frame
+		imshow( m_ProjWinName, pattern[0] );
+		cv::waitKey( 10 );
+		vector<cv::Mat> tmp1;
+		for ( int j = 0; j < m_NumSource; j++ )
+		{
+			tmp1.push_back( cv::Mat() );
+		}
+		ReadNextFrame( tmp1 );
 	}
 	else
 	{
@@ -542,16 +551,6 @@ void Calibrator::Scan( const bool captureRoi )
 
 	WriteRoi( m_ROICorners );
 	//==================
-
-	// consume 1 frame
-	imshow( m_ProjWinName, pattern[0] );
-	cv::waitKey( 10 );
-	vector<cv::Mat> tmp1;
-	for ( int j = 0; j < m_NumSource; j++ )
-	{
-		tmp1.push_back( cv::Mat() );
-	}
-	ReadNextFrame( tmp1 );
 
     for( int i = 0; i < patSiz; i++ )
 	{

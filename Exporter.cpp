@@ -226,3 +226,23 @@ void Exporter::GeneratePlyFromXYZ(
     std::cout << "done!\n";
 
 }//GeneratePlyFromXYZ
+
+//=============================
+void Exporter::ScaleZ(
+	const string inPly,
+	const float s,
+	const string outPly )
+{
+	std::ifstream inFile;
+	inFile.open( inPly.c_str(), std::ifstream::in );
+
+	string line;
+
+	vector<cv::Point3d> ptXYZ;
+	vector<cv::Point3i> ptRGB;
+
+	while ( getline( inFile, line ) )
+	{
+
+	}
+}//ScaleZ

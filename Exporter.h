@@ -32,5 +32,11 @@ public:
         const string xyz,
         const string texture,
         const string ply );
+	//========================
+	// Utility:
+	static void ScaleZ(
+		const string inPly,
+		const float s,
+		const string outPly );
 private:
 }; // Exporter
