@@ -17,7 +17,11 @@
 // 1. in meshlab, delete unwanted points
 // 2. downsample points by: filter -> sampling -> poisson disk sampling
 // 3. calculate normals by: filter -> point sets -> compute normals for point sets
-// 4.
+// 4. meshing point clouds by: filter -> Screen Poisson Surface Reconstruction, the higher value of Reconstruction Depth and Interpolation Weight are, the more faithful the surface is to the points
+// 5. edit mesh in MeshMixer, where it has Lasso tool in "Select"
+// 6. smooth the trimmed mesh in MeshLab: Filter -> Smooth, meshing .... -> either 1. Depth Smooth, or 2. Laplacian Smooth, or both
+//    Note: when doing so you may need to invert the surface normal to see the rendering results correctly: Filter -> Normal.... -> Invert Face Normal
+// 7. in MeshMixer, "Shell" the surface by: 1. select the whole surface, then 2. Edit -> Offset
 //========================================================
 #include <iostream>
 #include <string>
