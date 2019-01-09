@@ -22,6 +22,7 @@
 // 6. smooth the trimmed mesh in MeshLab: Filter -> Smooth, meshing .... -> either 1. Depth Smooth, or 2. Laplacian Smooth, or both
 //    Note: when doing so you may need to invert the surface normal to see the rendering results correctly: Filter -> Normal.... -> Invert Face Normal
 // 7. in MeshMixer, "Shell" the surface by: 1. select the whole surface, then 2. Edit -> Offset
+// 8. to down-sample mesh, use "Filters > Remeshing, simplification and construction > Quadratic Edge Collapse"
 //========================================================
 #include <iostream>
 #include <string>
