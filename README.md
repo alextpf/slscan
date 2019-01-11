@@ -1,7 +1,7 @@
 # slscan
 The goal is to use affordable, off the shelf, commercial equipment, and write up my own codes to make it work.
 
-The equipment includes: 2 web cams, a projector, and a PC, with the total price of less than $200 ( not including a DIY <a href="https://alexchenwoodworks.blogspot.com/2018/12/pc-controllable-turn-table.html">PC-controllable turn table</a> which was originally intended to be used in this project, but later turned out not usable ).
+The equipment includes: 2 web cams and a projector, with the total price of less than $200 ( not including a DIY <a href="https://alexchenwoodworks.blogspot.com/2018/12/pc-controllable-turn-table.html">PC-controllable turn table</a> which was originally intended to be used in this project, but later turned out not usable ).
 The software was written from scratch with C++ and OpenCV. The algorithm basically consists of:
 
 - calibrating each of the cameras, 
